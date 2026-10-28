@@ -1,0 +1,646 @@
+<title>LOTUS Склад и выезды</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: sticky top bar with four sections (Склад, Сетапы, Погрузка, Финансы); each section is a toolbar + dense tables, editors open in a side sheet. */
+:root{
+  --bg:#F3F5F6; --surface:#FFFFFF; --sunken:#E9EDEF; --fg:#15191D; --muted:#5B6670; --line:#D9DFE3;
+  --accent:#B3306A; --accent-soft:#F6E3EC; --accent-ink:#FFFFFF;
+  --ok:#2C7A4B; --ok-soft:#E1F1E7; --warn:#A86A12; --warn-soft:#FBEFD9; --bad:#BC3328; --bad-soft:#F8E1DE;
+  --c-rig:#6656C8; --c-power:#B0601C; --c-light:#A9850F; --c-video:#2B78AD; --c-sound:#2A836A; --c-stage:#94478A; --c-sfx:#C2475A; --c-dj:#4F6BB8; --c-cam:#3D8C99; --c-other:#66727C;
+  --f-display:"Unbounded","Onest",system-ui,sans-serif;
+  --f-body:"Onest",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:8px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1215; --surface:#161B1F; --sunken:#1D2328; --fg:#E6EBEE; --muted:#93A0A9; --line:#2A3238;
+  --accent:#E0679C; --accent-soft:#3A1F2C; --accent-ink:#1A0E14;
+  --ok:#5CC38A; --ok-soft:#173326; --warn:#E3A84B; --warn-soft:#382A14; --bad:#F07A6E; --bad-soft:#3B1D1A;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1215; --surface:#161B1F; --sunken:#1D2328; --fg:#E6EBEE; --muted:#93A0A9; --line:#2A3238;
+  --accent:#E0679C; --accent-soft:#3A1F2C; --accent-ink:#1A0E14;
+  --ok:#5CC38A; --ok-soft:#173326; --warn:#E3A84B; --warn-soft:#382A14; --bad:#F07A6E; --bad-soft:#3B1D1A;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1280px;margin:0 auto}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.topin{display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding-block:10px}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand b{font-family:var(--f-display);font-weight:700;font-size:18px;letter-spacing:.14em}
+.brand span{color:var(--muted);font-size:12px}
+nav.tabs{display:flex;gap:4px;flex-wrap:wrap}
+nav.tabs a{padding:7px 12px;border-radius:999px;color:var(--muted);text-decoration:none;font-weight:500}
+nav.tabs a:hover{color:var(--fg);background:var(--sunken)}
+nav.tabs a[aria-current="page"]{background:var(--fg);color:var(--bg)}
+.sync{margin-left:auto;font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.dot.on{background:var(--ok)} .dot.demo{background:var(--warn)}
+main{padding-block:20px 60px}
+h1{font-family:var(--f-display);font-weight:500;font-size:22px;margin:0;text-wrap:balance;letter-spacing:.01em}
+h2{font-family:var(--f-display);font-weight:500;font-size:15px;margin:0 0 10px;letter-spacing:.02em}
+h3{font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.head p{margin:4px 0 0;color:var(--muted);max-width:65ch}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+input,select,textarea{font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 9px;min-width:0}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input[type=number]{font-family:var(--f-mono);font-size:13px}
+input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
+button{font:inherit;font-weight:500;cursor:pointer;border-radius:6px;padding:7px 12px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+button:hover{background:var(--sunken)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.primary:hover{filter:brightness(1.07);background:var(--accent)}
+button.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+button.danger{color:var(--bad);border-color:var(--bad)}
+button.sm{padding:4px 8px;font-size:12px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.stat small{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em}
+.stat b{font-family:var(--f-mono);font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.tablebox{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle;white-space:nowrap}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;background:var(--sunken)}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-family:var(--f-mono);font-size:13px}
+td.wrap{white-space:normal;min-width:180px}
+tbody tr.click{cursor:pointer} tbody tr.click:hover{background:var(--sunken)}
+tfoot td{font-weight:600;background:var(--sunken)}
+.mono{font-family:var(--f-mono);font-size:12.5px}
+.muted{color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500;background:var(--sunken);color:var(--muted)}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.acc{background:var(--accent-soft);color:var(--accent)}
+.cat{display:inline-flex;align-items:center;gap:6px}
+.cat i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.ex{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--warn);border:1px solid currentColor;border-radius:4px;padding:0 4px;margin-left:6px;vertical-align:1px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;text-align:left}
+.card:hover{border-color:var(--accent)}
+.card .t{font-weight:600;font-size:15px}
+.card .row{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:13px}
+.card .row b{color:var(--fg);font-family:var(--f-mono);font-weight:600}
+.empty{border:1px dashed var(--line);border-radius:var(--r);padding:28px;text-align:center;color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:14px;min-width:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px 12px}
+.grid label,.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);font-weight:500}
+.grid label.span2{grid-column:span 2}
+@media (max-width:520px){.grid label.span2{grid-column:auto}}
+.cols{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:900px){.cols{grid-template-columns:minmax(0,1fr)}}
+.sumline{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
+.sumline:last-child{border-bottom:0}
+.sumline b{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.sumline.total{font-size:17px;padding-top:10px}
+.sumline.total b{color:var(--accent)}
+.warnbox{background:var(--warn-soft);color:var(--warn);border-radius:6px;padding:8px 10px;font-size:13px}
+.badbox{background:var(--bad-soft);color:var(--bad);border-radius:6px;padding:8px 10px;font-size:13px}
+.okbox{background:var(--ok-soft);color:var(--ok);border-radius:6px;padding:8px 10px;font-size:13px}
+.meter{height:8px;background:var(--sunken);border-radius:4px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--ok)}
+.meter i.warn{background:var(--warn)} .meter i.bad{background:var(--bad)}
+.truckgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:10px 0}
+@media (max-width:600px){.truckgrid{grid-template-columns:minmax(0,1fr)}}
+.svgbox{overflow-x:auto}
+.svgbox svg{display:block;width:100%;min-width:380px;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);margin-top:8px}
+.sheet-bg{position:fixed;inset:0;background:rgba(10,14,17,.45);z-index:20;display:flex;justify-content:flex-end}
+.sheet{background:var(--surface);width:min(560px,100%);height:100%;overflow-y:auto;padding:20px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) 20px;display:flex;flex-direction:column;gap:14px;border-left:1px solid var(--line)}
+.sheet .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:10px;border-top:1px solid var(--line)}
+.confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px}
+.banner{background:var(--warn-soft);color:var(--warn);font-size:13px;padding-block:8px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:6px;z-index:30;font-size:13px}
+@media (max-width:640px){.hs{display:none}}
+html.nofin .fin, html.ro .w{display:none!important}
+.inline{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.qty{width:72px}
+.w100{width:100%}
+@media (prefers-reduced-motion:no-preference){.card,button{transition:border-color .15s,background .15s}}
+</style>
+
+<header class="top"><div class="wrap topin">
+  <div class="brand"><b>LOTUS</b><span>Lotus Arena · Пхукет</span></div>
+  <nav class="tabs" id="tabs">
+    <a href="#inventory" data-tab="inventory">Склад</a>
+    <a href="#events" data-tab="events">Сетапы</a>
+    <a href="#loading" data-tab="loading">Погрузка</a>
+    <a href="#finance" data-tab="finance" class="fin">Финансы</a>
+  </nav>
+  <div class="sync"><button class="ghost sm" id="rolebtn" data-act="roles" hidden></button><span class="dot" id="syncdot"></span><span id="synctext">Подключение…</span></div>
+</div></header>
+<div class="banner" id="demobanner" hidden><div class="wrap">Демо-режим: хранилище недоступно в этом просмотре, изменения не сохранятся после перезагрузки.</div></div>
+<main class="wrap" id="app"><div class="empty">Загружаю склад, сетапы и автопарк…</div></main>
+<div id="sheetroot"></div>
+
+<script>
+(function(){
+"use strict";
+var CATS = {
+  rig:   {name:"Риггинг и фермы", color:"var(--c-rig)", prio:1},
+  stage: {name:"Сцена и конструкции", color:"var(--c-stage)", prio:2},
+  power: {name:"Электрика и коммутация", color:"var(--c-power)", prio:3},
+  light: {name:"Свет", color:"var(--c-light)", prio:4},
+  video: {name:"Видео и LED", color:"var(--c-video)", prio:5},
+  sound: {name:"Звук", color:"var(--c-sound)", prio:6},
+  sfx:   {name:"Спецэффекты", color:"var(--c-sfx)", prio:7},
+  dj:    {name:"DJ и бэклайн", color:"var(--c-dj)", prio:8},
+  cam:   {name:"Видеосъёмка", color:"var(--c-cam)", prio:9},
+  comm:  {name:"Связь", color:"var(--c-other)", prio:10},
+  other: {name:"Прочее", color:"var(--c-other)", prio:11}
+};
+var STATUSES = {
+  draft:{name:"Черновик",cls:""}, confirmed:{name:"Подтверждён",cls:"acc"}, onsite:{name:"На площадке",cls:"warn"},
+  done:{name:"Завершён",cls:"ok"}, cancelled:{name:"Отменён",cls:"bad"}
+};
+var S = {items:{}, trucks:{}, events:{}, settings:{vat:7}, loaded:{items:false,trucks:false,events:false}, demo:false, tab:"inventory",
+  invQ:"", invCat:"", loadEvent:"", finEvent:""};
+var db = null;
+
+/* ---------- helpers ---------- */
+function $(s,r){return (r||document).querySelector(s)}
+function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function n(v){v=parseFloat(v);return isFinite(v)?v:0}
+var fmtB = new Intl.NumberFormat("ru-RU",{maximumFractionDigits:0});
+function baht(v){return fmtB.format(Math.round(v))+" ฿"}
+function num(v,d){return new Intl.NumberFormat("ru-RU",{maximumFractionDigits:d||0}).format(v)}
+function uid(p){return p+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function clone(o){return JSON.parse(JSON.stringify(o))}
+function days(ev){ if(!ev.dateFrom) return 1; var a=new Date(ev.dateFrom), b=new Date(ev.dateTo||ev.dateFrom); return Math.max(1, Math.round((b-a)/864e5)+1)}
+function fmtDate(d){ if(!d) return "—"; var x=new Date(d+"T00:00:00"); return x.toLocaleDateString("ru-RU",{day:"numeric",month:"short"})}
+function range(ev){ return ev.dateTo && ev.dateTo!==ev.dateFrom ? fmtDate(ev.dateFrom)+" – "+fmtDate(ev.dateTo) : fmtDate(ev.dateFrom)}
+function catTag(c){var k=CATS[c]||CATS.other;return '<span class="cat"><i style="background:'+k.color+'"></i>'+esc(k.name)+'</span>'}
+function exTag(o){return o && o.example ? '<span class="ex" title="Пример для демонстрации">пример</span>' : ''}
+function sortedItems(){return Object.keys(S.items).map(function(k){return S.items[k]}).sort(function(a,b){return (CATS[a.cat]||CATS.other).prio-(CATS[b.cat]||CATS.other).prio || String(a.name).localeCompare(b.name)})}
+function sortedEvents(){return Object.keys(S.events).map(function(k){return S.events[k]}).sort(function(a,b){return String(a.dateFrom).localeCompare(String(b.dateFrom))})}
+function sortedTrucks(){return Object.keys(S.trucks).map(function(k){return S.trucks[k]}).sort(function(a,b){return n(a.L)*n(a.W)-n(b.L)*n(b.W)})}
+var toastT;
+function toast(msg){var t=$("#toast"); if(!t){t=document.createElement("div");t.id="toast";t.className="toast";t.setAttribute("role","status");document.body.appendChild(t)} t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(function(){t.hidden=true},2200)}
+
+/* ---------- storage ----------
+   Money lives in the admin-only "fin" collection (doc ids item-<id>, truck-<id>, event-<id>);
+   public collections hold the rest. The page merges both into S.items / S.trucks / S.events. */
+var FIN={items:["rate","value","amort"],trucks:["ratePerDay","ratePerKm"],events:["crew","extra","discount","nextDayPct","vat"]};
+var PREFIX={items:"item-",trucks:"truck-",events:"event-"};
+var RAW={items:{},trucks:{},events:{}}, FINDOCS={};
+var ROLE={admin:true,write:true,known:false};
+function rebuild(){
+  ["items","trucks","events"].forEach(function(coll){ var m={};
+    Object.keys(RAW[coll]).forEach(function(id){ var o=clone(RAW[coll][id]), f=FINDOCS[PREFIX[coll]+id]; if(f) FIN[coll].forEach(function(k){ if(f[k]!==undefined) o[k]=f[k] }); o.id=id; m[id]=o });
+    S[coll]=m });
+}
+function split(coll,obj){ var pub=clone(obj), fin={}; FIN[coll].forEach(function(k){ if(pub[k]!==undefined) fin[k]=pub[k]; delete pub[k] }); pub.id=obj.id; return {pub:pub,fin:fin} }
+function fail(e){toast("Не удалось сохранить: "+(e&&(e.message||e.code)||"ошибка"))}
+function save(coll,obj){
+  var p=split(coll,obj);
+  RAW[coll][obj.id]=p.pub; if(ROLE.admin) FINDOCS[PREFIX[coll]+obj.id]=p.fin; rebuild();
+  if(db){
+    var w=[db.collection(coll).doc(obj.id).set(p.pub)];
+    if(ROLE.admin) w.push(db.collection("fin").doc(PREFIX[coll]+obj.id).set(p.fin));
+    return Promise.all(w).then(function(){toast("Сохранено")},fail);
+  }
+  render(); toast("Сохранено (демо)"); return Promise.resolve();
+}
+function remove(coll,id){
+  delete RAW[coll][id]; delete FINDOCS[PREFIX[coll]+id]; rebuild();
+  if(db){ var w=[db.collection(coll).doc(id).delete()]; if(ROLE.admin) w.push(db.collection("fin").doc(PREFIX[coll]+id).delete());
+    return Promise.all(w).then(function(){toast("Удалено")},function(e){toast("Не удалось удалить: "+(e&&(e.message||e.code)))}) }
+  render(); return Promise.resolve();
+}
+function patchEvent(id,fields){
+  var ev=RAW.events[id]; if(!ev) return;
+  Object.keys(fields).forEach(function(k){ev[k]=fields[k]}); rebuild();
+  if(db){ db.collection("events").doc(id).update(fields).catch(fail) } else render();
+}
+
+/* ---------- availability ---------- */
+function overlaps(a,b){ var a1=a.dateFrom||"", a2=a.dateTo||a.dateFrom||"", b1=b.dateFrom||"", b2=b.dateTo||b.dateFrom||""; return a1 && b1 && a1<=b2 && b1<=a2 }
+function bookedFor(itemId, ev, excludeId){
+  var t=0; Object.keys(S.events).forEach(function(k){ var e=S.events[k]; if(k===excludeId || e.status==="cancelled" || e.status==="done") return;
+    if(overlaps(e,ev)) (e.items||[]).forEach(function(r){ if(r.itemId===itemId) t+=n(r.qty) }) }); return t;
+}
+function todayStr(){var d=new Date();return d.toISOString().slice(0,10)}
+function freeToday(it){ var ev={dateFrom:todayStr(),dateTo:todayStr()}; return n(it.qty)-n(it.repair)-bookedFor(it.id,ev,null) }
+
+/* ---------- money ---------- */
+function calc(ev){
+  var d=days(ev), next=(ev.nextDayPct==null?100:n(ev.nextDayPct))/100, dayFactor=1+(d-1)*next;
+  var rental=[], rentalSum=0, amort=0, noRate=0;
+  (ev.items||[]).forEach(function(r){ var it=S.items[r.itemId]; if(!it) return; var s=n(it.rate)*n(r.qty)*dayFactor; rentalSum+=s; amort+=n(it.amort)*n(r.qty)*d; if(!n(it.rate)) noRate++; rental.push({name:it.name,qty:n(r.qty),rate:n(it.rate),sum:s}) });
+  var disc=rentalSum*n(ev.discount)/100;
+  var crewSum=0, crew=(ev.crew||[]).map(function(c){var s=n(c.people)*n(c.days)*n(c.rate); crewSum+=s; return {role:c.role,people:n(c.people),days:n(c.days),rate:n(c.rate),sum:s}});
+  var logi=[], logiSum=0, km=n(ev.distanceKm)*2*Math.max(1,n(ev.trips||1));
+  (ev.truckIds||[]).forEach(function(tid){var t=S.trucks[tid]; if(!t) return; var s=n(t.ratePerDay)*d+n(t.ratePerKm)*km; logiSum+=s; logi.push({name:t.name,days:d,km:km,sum:s})});
+  var extraSum=0, extra=(ev.extra||[]).map(function(x){extraSum+=n(x.amount);return {name:x.name,sum:n(x.amount)}});
+  var sub=rentalSum-disc+crewSum+logiSum+extraSum, vat=ev.vat? sub*n(S.settings.vat)/100 : 0;
+  return {d:d,amort:amort,noRate:noRate,dayFactor:dayFactor,rental:rental,rentalSum:rentalSum,disc:disc,crew:crew,crewSum:crewSum,logi:logi,logiSum:logiSum,km:km,extra:extra,extraSum:extraSum,sub:sub,vat:vat,total:sub+vat};
+}
+
+/* ---------- truck packing ---------- */
+function plan(ev, truckIds){
+  var units=[];
+  (ev.items||[]).forEach(function(r){ var it=S.items[r.itemId]; if(!it) return;
+    for(var i=0;i<n(r.qty);i++) units.push({key:it.id+"#"+(i+1), itemId:it.id, name:it.name, idx:i+1, of:n(r.qty), cat:it.cat||"other",
+      l:Math.max(n(it.L),1), w:Math.max(n(it.W),1), h:Math.max(n(it.H),1), kg:n(it.kg), stack:!!it.stackable, prio:(CATS[it.cat]||CATS.other).prio}) });
+  // last needed on site goes in first (toward the cab)
+  units.sort(function(a,b){return b.prio-a.prio || (b.l*b.w)-(a.l*a.w) || b.h-a.h});
+  var trucks=(truckIds||[]).map(function(id){return S.trucks[id]}).filter(Boolean).map(function(t){return {t:t,label:t.name,L:n(t.L),W:n(t.W),H:n(t.H),max:n(t.payload),stacks:[],kg:0,vol:0,usedL:0}});
+  var seen={}; trucks.forEach(function(T){seen[T.t.id]=(seen[T.t.id]||0)+1; if(truckIds.filter(function(x){return x===T.t.id}).length>1) T.label=T.t.name+" №"+seen[T.t.id]});
+  var maxH=trucks.length?trucks.reduce(function(m,t){return Math.min(m,t.H)},1e9):220;
+  // build stacks inside one priority group
+  var stacks=[];
+  units.forEach(function(u){
+    var s=null;
+    if(u.stack){ for(var i=stacks.length-1;i>=0;i--){ var c=stacks[i]; if(c.prio!==u.prio) break; var top=c.units[c.units.length-1];
+      if(top.stack && c.h+u.h<=maxH && Math.max(u.l,u.w)<=Math.max(top.l,top.w) && Math.min(u.l,u.w)<=Math.min(top.l,top.w)){s=c;break} } }
+    if(!s){ s={units:[],l:u.l,w:u.w,h:0,kg:0,prio:u.prio,cat:u.cat}; stacks.push(s) }
+    s.units.push(u); s.h+=u.h; s.kg+=u.kg;
+  });
+  var order=0, overflow=[];
+  stacks.forEach(function(s){
+    var placed=false;
+    for(var i=0;i<trucks.length && !placed;i++){ var T=trucks[i];
+      if(s.h>T.H || T.kg+s.kg>T.max) continue;
+      var spot=findSpot(T,s);
+      if(spot){
+        s.x=spot.x; s.y=spot.y; s.dx=spot.dx; s.dy=spot.dy; s.truck=i; T.stacks.push(s); T.kg+=s.kg;
+        T.usedL=Math.max(T.usedL,spot.x+spot.dx);
+        s.units.forEach(function(u){T.vol+=u.l*u.w*u.h; u.order=++order; u.truck=T.label});
+        placed=true;
+      }
+    }
+    if(!placed){ s.units.forEach(function(u){overflow.push(u)}) }
+  });
+  trucks.forEach(function(T){ T.floor=T.stacks.reduce(function(m,s){return m+s.dx*s.dy},0)/(T.L*T.W||1); T.volP=T.vol/(T.L*T.W*T.H||1); T.kgP=T.kg/(T.max||1) });
+  var totalKg=units.reduce(function(m,u){return m+u.kg},0), totalVol=units.reduce(function(m,u){return m+u.l*u.w*u.h},0);
+  return {units:units,trucks:trucks,overflow:overflow,totalKg:totalKg,totalVol:totalVol};
+}
+/* bottom-left placement: push each stack as close to the cab (x=0), then to one wall, as possible */
+function findSpot(T,s){
+  // a stack never goes deeper (toward the cab) than stacks from groups loaded before it, so unloading order holds
+  var minX=0; T.stacks.forEach(function(o){ if(o.prio>s.prio) minX=Math.max(minX,o.x) });
+  var cand=[{x:0,y:0}]; T.stacks.forEach(function(o){cand.push({x:o.x+o.dx,y:o.y});cand.push({x:o.x,y:o.y+o.dy});cand.push({x:o.x+o.dx,y:0});cand.push({x:0,y:o.y+o.dy})});
+  var best=null;
+  [[s.l,s.w],[s.w,s.l]].forEach(function(dim){ var dx=dim[0], dy=dim[1];
+    cand.forEach(function(c){
+      if(c.x<minX || c.x+dx>T.L || c.y+dy>T.W) return;
+      for(var k=0;k<T.stacks.length;k++){var o=T.stacks[k]; if(c.x<o.x+o.dx && o.x<c.x+dx && c.y<o.y+o.dy && o.y<c.y+dy) return}
+      var score=(c.x+dx)*10000+c.y; // keep the load front edge short, then hug the wall
+      if(!best || score<best.score) best={x:c.x,y:c.y,dx:dx,dy:dy,score:score};
+    }) });
+  return best;
+}
+function suggestTrucks(ev){
+  var all=sortedTrucks(); if(!all.length) return null;
+  var cost=function(ids){return ids.reduce(function(m,id){return m+n(S.trucks[id].ratePerDay)},0)};
+  var fits=function(ids){return !plan(ev,ids).overflow.length};
+  var opts=[]; all.forEach(function(a){opts.push([a.id])}); all.forEach(function(a,i){all.forEach(function(b,j){ if(j>=i) opts.push([b.id,a.id]) })});
+  opts.sort(function(x,y){return cost(x)-cost(y)});
+  for(var i=0;i<opts.length;i++) if(fits(opts[i])) return opts[i];
+  var big=all[all.length-1], ids=[big.id,big.id];
+  for(var k=0;k<6;k++){ ids.push(big.id); if(fits(ids)) return ids }
+  return ids;
+}
+/* ---------- render ---------- */
+function setTab(){
+  var h=(location.hash||"").replace("#",""); S.tab=["inventory","events","loading","finance"].indexOf(h)>=0?h:"inventory"; if(S.tab==="finance"&&!ROLE.admin) S.tab="inventory";
+  Array.prototype.forEach.call(document.querySelectorAll("#tabs a"),function(a){ if(a.dataset.tab===S.tab) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current") });
+}
+function allLoaded(){return S.loaded.items&&S.loaded.trucks&&S.loaded.events}
+function render(){
+  setTab();
+  if(sheetOpen) return; // keep editor drafts intact; list refreshes when the sheet closes
+  var app=$("#app");
+  if(!allLoaded()){ app.innerHTML='<div class="empty">Загружаю склад, сетапы и автопарк…</div>'; return }
+  var sc=window.scrollY;
+  app.innerHTML = ({inventory:vInventory,events:vEvents,loading:vLoading,finance:vFinance})[S.tab]();
+  bind(app); window.scrollTo(0,sc);
+}
+
+function vInventory(){
+  var items=sortedItems(), q=S.invQ.toLowerCase();
+  var list=items.filter(function(it){return (!S.invCat||it.cat===S.invCat||(S.invCat==="_est"&&it.dimsEst)||(S.invCat==="_norate"&&!n(it.rate))) && (!q || (it.name+" "+(it.sub||"")+" "+(it.loc||"")+" "+(it.serials||"")).toLowerCase().indexOf(q)>=0)});
+  var units=0,kg=0,repair=0,rate=0,value=0,est=0,norate=0; items.forEach(function(it){units+=n(it.qty);kg+=n(it.qty)*n(it.kg);repair+=n(it.repair);rate+=n(it.qty)*n(it.rate);value+=n(it.qty)*n(it.value);if(it.dimsEst)est++;if(!n(it.rate))norate++});
+  var h='<div class="head"><div><h1>Склад оборудования</h1><p>Каждая строка — тип оборудования в кейсах. Размеры и вес кейса нужны для расчёта погрузки, ставка — для сметы.</p></div><button class="primary w" data-act="newItem">+ Добавить позицию</button></div>';
+  h+='<div class="stats"><div class="stat"><small>Позиций</small><b>'+items.length+'</b></div><div class="stat"><small>Кейсов / единиц</small><b>'+num(units)+'</b></div><div class="stat"><small>Общий вес</small><b>'+num(kg/1000,1)+' т</b></div><div class="stat"><small>В ремонте</small><b>'+num(repair)+'</b></div><div class="stat fin"><small>Стоимость парка</small><b>'+baht(value)+'</b></div><div class="stat fin"><small>Весь парк по прайсу / сутки</small><b>'+baht(rate)+'</b></div></div>'+
+    ((est||(norate&&ROLE.admin))?'<div class="warnbox" style="margin-bottom:12px">'+(est?'У '+est+' позиций размеры и вес кейса оценочные (отмечены «≈»): уточните их, чтобы раскладка в траке была точной. ':'')+(norate&&ROLE.admin?norate+' позиций без цены аренды в прайсе.':'')+'</div>':'');
+  h+='<div class="toolbar"><input id="invQ" type="search" placeholder="Поиск: название, место, серийный №" value="'+esc(S.invQ)+'" style="flex:1 1 240px"><select id="invCat"><option value="">Все категории</option><option value="_est"'+(S.invCat==="_est"?" selected":"")+'>Размеры не уточнены</option><option class="fin" value="_norate"'+(S.invCat==="_norate"?" selected":"")+'>Без цены</option>'+Object.keys(CATS).map(function(k){return '<option value="'+k+'"'+(S.invCat===k?" selected":"")+'>'+CATS[k].name+'</option>'}).join("")+'</select></div>';
+  if(!items.length) return h+'<div class="empty">Склад пока пуст. Нажмите «Добавить позицию», чтобы внести первое оборудование: название, количество, размеры кейса и ставку аренды.</div>';
+  h+='<div class="tablebox"><table><thead><tr><th>Наименование</th><th class="hs">Категория</th><th class="num">Всего</th><th class="num">Свободно</th><th class="num hs">Кейс Д×Ш×В, см</th><th class="num hs">Вес, кг</th><th class="num fin">Ставка / сутки</th><th class="hs">Место</th></tr></thead><tbody>';
+  list.forEach(function(it){ var f=freeToday(it);
+    h+='<tr class="click" data-act="editItem" data-id="'+esc(it.id)+'"><td class="wrap"><b>'+esc(it.name)+'</b>'+exTag(it)+(it.sub?'<div class="muted" style="font-size:12px">'+esc(it.sub)+'</div>':'')+(n(it.repair)?' <span class="pill bad">ремонт: '+n(it.repair)+'</span>':'')+'</td><td class="hs">'+catTag(it.cat)+'</td><td class="num">'+n(it.qty)+'</td><td class="num"><span class="pill '+(f<=0?"bad":f<n(it.qty)?"warn":"ok")+'">'+f+'</span></td><td class="num hs">'+(it.dimsEst?'<span class="muted" title="Оценка, уточните">≈ </span>':'')+n(it.L)+'×'+n(it.W)+'×'+n(it.H)+(it.stackable?' <span class="muted" title="Можно ставить в стек">⇅</span>':'')+'</td><td class="num hs">'+num(n(it.kg))+'</td><td class="num fin">'+(n(it.rate)?baht(n(it.rate)):'<span class="pill warn">нет цены</span>')+'</td><td class="muted hs">'+esc(it.loc||"—")+'</td></tr>'});
+  if(!list.length) h+='<tr><td colspan="8" class="muted">Ничего не найдено по фильтру.</td></tr>';
+  return h+'</tbody></table></div>';
+}
+
+function vEvents(){
+  var evs=sortedEvents();
+  var h='<div class="head"><div><h1>Сетапы и выезды</h1><p>Площадка, даты, список оборудования, транспорт и бригада. Оборудование, занятое в пересекающихся по датам сетапах, учитывается автоматически.</p></div><button class="primary w" data-act="newEvent">+ Новый сетап</button></div>';
+  if(!evs.length) return h+'<div class="empty">Сетапов пока нет. Создайте первый выезд: площадка, даты, затем добавьте оборудование из склада.</div>';
+  h+='<div class="cards">';
+  evs.forEach(function(ev){ var c=calc(ev), st=STATUSES[ev.status]||STATUSES.draft, u=(ev.items||[]).reduce(function(m,r){return m+n(r.qty)},0), conflicts=conflictsOf(ev);
+    h+='<button class="card" data-act="editEvent" data-id="'+esc(ev.id)+'"><div class="inline" style="justify-content:space-between;width:100%"><span class="pill '+st.cls+'">'+st.name+'</span><span class="mono muted">'+range(ev)+' · '+c.d+' дн.</span></div><div class="t">'+esc(ev.name||"Без названия")+exTag(ev)+'</div><div class="muted">'+esc([ev.client,ev.venue].filter(Boolean).join(" · ")||"—")+'</div>'+
+      '<div class="row"><span>Кейсов</span><b>'+u+'</b></div><div class="row"><span>Траки</span><b>'+((ev.truckIds||[]).length||"—")+'</b></div><div class="row fin"><span>Итого по смете</span><b>'+baht(c.total)+'</b></div>'+(conflicts.length?'<div class="badbox">Не хватает: '+esc(conflicts.map(function(x){return x.name+" ("+x.short+")"}).join(", "))+'</div>':'')+'</button>'});
+  return h+'</div>';
+}
+function conflictsOf(ev){
+  if(ev.status==="cancelled"||ev.status==="done") return [];
+  var out=[]; (ev.items||[]).forEach(function(r){var it=S.items[r.itemId]; if(!it) return; var free=n(it.qty)-n(it.repair)-bookedFor(it.id,ev,ev.id); if(n(r.qty)>free) out.push({name:it.name,short:n(r.qty)-Math.max(free,0)})}); return out;
+}
+
+function eventSelect(id,cur){
+  var evs=sortedEvents().filter(function(e){return e.status!=="cancelled"});
+  return '<select id="'+id+'" style="flex:1 1 260px;max-width:460px">'+evs.map(function(e){return '<option value="'+esc(e.id)+'"'+(e.id===cur?" selected":"")+'>'+esc((e.name||"Без названия")+" · "+range(e))+'</option>'}).join("")+'</select>';
+}
+function meter(p){ var cls=p>1?"bad":p>.85?"warn":""; return '<div class="meter"><i class="'+cls+'" style="width:'+Math.min(100,p*100).toFixed(1)+'%"></i></div>' }
+
+function vLoading(){
+  var evs=sortedEvents().filter(function(e){return e.status!=="cancelled"});
+  var h='<div class="head"><div><h1>Погрузка траков</h1><p>Раскладка кейсов по полу трака, вид сверху. Порядок обратный монтажу: то, что нужно на площадке первым (риггинг, питание), грузится последним и стоит у дверей.</p></div><button class="w" data-act="newTruck">+ Трак в автопарк</button></div>';
+  if(!S.loadEvent || !S.events[S.loadEvent]) S.loadEvent = evs.length?evs[0].id:"";
+  if(!evs.length) return h+'<div class="empty">Сначала создайте сетап и добавьте в него оборудование.</div>'+vFleet();
+  var ev=S.events[S.loadEvent];
+  h+='<div class="toolbar"><span class="muted">Сетап</span>'+eventSelect("loadEv",S.loadEvent)+'<button class="w" data-act="editEvent" data-id="'+esc(ev.id)+'">Изменить сетап</button></div>';
+  if(!(ev.items||[]).length) return h+'<div class="empty">В этом сетапе ещё нет оборудования.</div>'+vFleet();
+  var tids=ev.truckIds||[];
+  if(!tids.length){
+    var sug=suggestTrucks(ev);
+    h+='<div class="panel"><div class="warnbox">К сетапу не привязан транспорт.</div>'+(sug?'<p>Подходящий вариант: <b>'+esc(sug.map(function(id){return S.trucks[id].name}).join(" + "))+'</b>.</p><button class="primary w" data-act="applyTrucks" data-ids="'+esc(sug.join(","))+'">Назначить этот транспорт</button>':'<p class="muted">Добавьте траки в автопарк ниже.</p>')+'</div>';
+    return h+vFleet();
+  }
+  var p=plan(ev,tids), chk=ev.check||{};
+  var loadedN=p.units.filter(function(u){return chk[u.key]&&chk[u.key].l}).length, unN=p.units.filter(function(u){return chk[u.key]&&chk[u.key].u}).length, retN=p.units.filter(function(u){return chk[u.key]&&chk[u.key].r}).length;
+  h+='<div class="stats"><div class="stat"><small>Кейсов</small><b>'+p.units.length+'</b></div><div class="stat"><small>Вес груза</small><b>'+num(p.totalKg)+' кг</b></div><div class="stat"><small>Объём</small><b>'+num(p.totalVol/1e6,1)+' м³</b></div><div class="stat"><small>Погружено</small><b>'+loadedN+' / '+p.units.length+'</b></div><div class="stat"><small>Вернулось на склад</small><b>'+retN+' / '+p.units.length+'</b></div></div>';
+  if(p.overflow.length){ var sug2=suggestTrucks(ev); h+='<div class="badbox" style="margin-bottom:12px">Не поместилось '+p.overflow.length+' кейс(ов): '+esc(groupNames(p.overflow))+'.'+(sug2?' Попробуйте: '+esc(sug2.map(function(id){return S.trucks[id].name}).join(" + "))+'. <button class="sm w" data-act="applyTrucks" data-ids="'+esc(sug2.join(","))+'">Назначить</button>':'')+'</div>' }
+  else h+='<div class="okbox" style="margin-bottom:12px">Всё оборудование помещается. Грузите по номерам: №1 первым, к кабине.</div>';
+  var maxL=p.trucks.reduce(function(m,T){return Math.max(m,T.L)},0);
+  p.trucks.forEach(function(T,i){
+    h+='<div class="panel"><div class="inline" style="justify-content:space-between"><h2 style="margin:0">'+esc(T.label)+exTag(T.t)+'</h2><span class="mono muted">'+T.L+'×'+T.W+'×'+T.H+' см · до '+num(T.max)+' кг</span></div>';
+    h+='<div class="truckgrid"><div class="f">Пол: '+Math.round(T.floor*100)+'% · занято '+num(T.usedL/100,1)+' из '+num(T.L/100,1)+' м'+meter(T.floor)+'</div><div class="f">Объём: '+Math.round(T.volP*100)+'%'+meter(T.volP)+'</div><div class="f">Вес: '+num(T.kg)+' кг · '+Math.round(T.kgP*100)+'%'+meter(T.kgP)+'</div></div>';
+    h+='<div class="svgbox">'+truckSvg(T,maxL)+'</div></div>';
+  });
+  h+='<div class="legend" style="margin:-4px 0 14px">'+Object.keys(CATS).map(function(k){return catTag(k)}).join("")+'<span>×2 — кейсы в стеке</span></div>';
+  // loading list
+  var placed=p.units.filter(function(u){return u.order}).sort(function(a,b){return a.order-b.order});
+  h+='<div class="panel"><div class="inline" style="justify-content:space-between;margin-bottom:8px"><h2 style="margin:0">Чек-лист погрузки и разгрузки</h2><span class="muted" style="font-size:12px">Отметки сохраняются и видны всей команде</span></div><div class="tablebox"><table><thead><tr><th class="num">№</th><th>Кейс</th><th class="hs">Категория</th><th class="hs">Трак</th><th class="num hs">Вес</th><th>Погружен</th><th>Выгружен</th><th>На складе</th></tr></thead><tbody>';
+  placed.forEach(function(u){ var c=chk[u.key]||{};
+    h+='<tr><td class="num">'+u.order+'</td><td class="wrap">'+esc(u.name)+(u.of>1?' <span class="muted mono">'+u.idx+'/'+u.of+'</span>':'')+'</td><td class="hs">'+catTag(u.cat)+'</td><td class="muted hs">'+esc(u.truck)+'</td><td class="num hs">'+num(u.kg)+'</td>'+
+      ['l','u','r'].map(function(f){return '<td><input type="checkbox" aria-label="отметка" data-chk="'+esc(u.key)+'" data-f="'+f+'"'+(c[f]?" checked":"")+(ROLE.write?"":" disabled")+'></td>'}).join("")+'</tr>'});
+  h+='</tbody></table></div><p class="muted" style="font-size:12px;margin:8px 0 0">Разгрузка на площадке идёт в обратном порядке: от №'+(placed.length)+' к №1. Выгружено: '+unN+' из '+p.units.length+'.</p><div class="inline" style="margin-top:8px"><button class="sm ghost w" data-act="resetCheck">Сбросить отметки</button></div></div>';
+  return h+vFleet();
+}
+function groupNames(units){var m={};units.forEach(function(u){m[u.name]=(m[u.name]||0)+1});return Object.keys(m).map(function(k){return k+" ×"+m[k]}).join(", ")}
+function truckSvg(T,maxL){
+  var pad=40, L=T.L, W=T.W, vw=L+pad*2+60, vh=W+70, pct=Math.min(100,vw/((maxL||L)+pad*2+60)*100);
+  var s='<svg style="width:'+pct.toFixed(1)+'%" viewBox="0 0 '+vw+' '+vh+'" role="img" aria-label="Раскладка груза в '+esc(T.t.name)+'" font-family="Onest, system-ui, sans-serif">';
+  s+='<rect x="'+(pad-34)+'" y="'+(30+W*0.15)+'" width="30" height="'+(W*0.7)+'" rx="8" fill="var(--sunken)" stroke="var(--line)"/>';
+  s+='<text x="'+(pad-19)+'" y="'+(30+W/2)+'" fill="var(--muted)" font-size="'+Math.max(11,W*0.06)+'" text-anchor="middle" transform="rotate(-90 '+(pad-19)+' '+(30+W/2)+')">кабина</text>';
+  s+='<rect x="'+pad+'" y="30" width="'+L+'" height="'+W+'" fill="var(--sunken)" stroke="var(--muted)" stroke-width="2"/>';
+  for(var m=100;m<L;m+=100) s+='<line x1="'+(pad+m)+'" y1="30" x2="'+(pad+m)+'" y2="'+(30+W)+'" stroke="var(--line)" stroke-dasharray="4 6"/><text x="'+(pad+m)+'" y="22" fill="var(--muted)" font-size="12" text-anchor="middle">'+(m/100)+' м</text>';
+  s+='<line x1="'+(pad+L)+'" y1="30" x2="'+(pad+L)+'" y2="'+(30+W)+'" stroke="var(--accent)" stroke-width="5"/>';
+  s+='<text x="'+(pad+L+12)+'" y="'+(30+W/2)+'" fill="var(--accent)" font-size="13" font-weight="600" transform="rotate(90 '+(pad+L+12)+' '+(30+W/2)+')" text-anchor="middle">двери</text>';
+  T.stacks.forEach(function(st){ var x=pad+st.x, y=30+st.y, col=(CATS[st.cat]||CATS.other).color, nums=st.units.map(function(u){return u.order});
+    var label=nums.length>1? nums[0]+"–"+nums[nums.length-1] : String(nums[0]), fs=Math.max(10,Math.min(18,Math.min(st.dx,st.dy)/3.4));
+    s+='<g><title>'+esc(st.units.map(function(u){return "№"+u.order+" "+u.name}).join("\n"))+'</title><rect x="'+(x+1.5)+'" y="'+(y+1.5)+'" width="'+(st.dx-3)+'" height="'+(st.dy-3)+'" rx="3" fill="'+col+'" fill-opacity=".88" stroke="var(--surface)" stroke-width="1.5"/>';
+    s+='<text x="'+(x+st.dx/2)+'" y="'+(y+st.dy/2+fs*0.35)+'" fill="#fff" font-size="'+fs+'" font-weight="600" text-anchor="middle">'+label+'</text>';
+    if(st.units.length>1) s+='<text x="'+(x+st.dx-5)+'" y="'+(y+fs*0.9+2)+'" fill="#fff" font-size="'+Math.max(9,fs*0.62)+'" text-anchor="end">×'+st.units.length+'</text>';
+    s+='</g>'});
+  s+='<text x="'+pad+'" y="'+(W+56)+'" fill="var(--muted)" font-size="12">Вид сверху. Номер — порядок погрузки; ×N — сколько кейсов стоит друг на друге.</text>';
+  return s+'</svg>';
+}
+function vFleet(){
+  var ts=sortedTrucks();
+  var h='<div class="panel"><h2>Автопарк</h2>';
+  if(!ts.length) return h+'<div class="empty">Траков пока нет. Добавьте трак: внутренние размеры кузова, грузоподъёмность и тариф.</div></div>';
+  h+='<div class="tablebox"><table><thead><tr><th>Трак</th><th class="num">Кузов Д×Ш×В, см</th><th class="num">Объём</th><th class="num">Грузоподъёмность</th><th class="num fin">За день</th><th class="num fin">За км</th></tr></thead><tbody>';
+  ts.forEach(function(t){h+='<tr class="click" data-act="editTruck" data-id="'+esc(t.id)+'"><td><b>'+esc(t.name)+'</b>'+exTag(t)+(t.plate?' <span class="muted mono">'+esc(t.plate)+'</span>':'')+'</td><td class="num">'+n(t.L)+'×'+n(t.W)+'×'+n(t.H)+'</td><td class="num">'+num(n(t.L)*n(t.W)*n(t.H)/1e6,1)+' м³</td><td class="num">'+num(n(t.payload))+' кг</td><td class="num fin">'+baht(n(t.ratePerDay))+'</td><td class="num fin">'+baht(n(t.ratePerKm))+'</td></tr>'});
+  return h+'</tbody></table></div></div>';
+}
+
+function vFinance(){
+  var evs=sortedEvents();
+  var h='<div class="head"><div><h1>Финансы</h1><p>Смета по каждому сетапу: аренда оборудования, работа бригады, логистика и прочие расходы. Суммы в батах.</p></div></div>';
+  if(!evs.length) return h+'<div class="empty">Смет пока нет. Они появятся, когда вы создадите сетап.</div>';
+  var active=evs.filter(function(e){return e.status!=="cancelled"}), tot={r:0,c:0,l:0,x:0,t:0};
+  var rows=active.map(function(e){var c=calc(e); tot.r+=c.rentalSum-c.disc; tot.c+=c.crewSum; tot.l+=c.logiSum; tot.x+=c.extraSum; tot.t+=c.total; return {e:e,c:c}});
+  h+='<div class="stats"><div class="stat"><small>Сетапов</small><b>'+active.length+'</b></div><div class="stat"><small>Аренда</small><b>'+baht(tot.r)+'</b></div><div class="stat"><small>Работы</small><b>'+baht(tot.c)+'</b></div><div class="stat"><small>Логистика</small><b>'+baht(tot.l)+'</b></div><div class="stat"><small>Итого с НДС</small><b>'+baht(tot.t)+'</b></div></div>';
+  h+='<div class="tablebox" style="margin-bottom:18px"><table><thead><tr><th>Сетап</th><th>Даты</th><th>Статус</th><th class="num">Аренда</th><th class="num">Работы</th><th class="num">Логистика</th><th class="num">Прочее</th><th class="num">Итого</th></tr></thead><tbody>';
+  rows.forEach(function(r){var st=STATUSES[r.e.status]||STATUSES.draft; h+='<tr class="click" data-act="finPick" data-id="'+esc(r.e.id)+'"><td><b>'+esc(r.e.name||"Без названия")+'</b>'+exTag(r.e)+'</td><td class="mono">'+range(r.e)+'</td><td><span class="pill '+st.cls+'">'+st.name+'</span></td><td class="num">'+baht(r.c.rentalSum-r.c.disc)+'</td><td class="num">'+baht(r.c.crewSum)+'</td><td class="num">'+baht(r.c.logiSum)+'</td><td class="num">'+baht(r.c.extraSum)+'</td><td class="num"><b>'+baht(r.c.total)+'</b></td></tr>'});
+  h+='</tbody><tfoot><tr><td colspan="3">Всего</td><td class="num">'+baht(tot.r)+'</td><td class="num">'+baht(tot.c)+'</td><td class="num">'+baht(tot.l)+'</td><td class="num">'+baht(tot.x)+'</td><td class="num">'+baht(tot.t)+'</td></tr></tfoot></table></div>';
+  if(!S.finEvent||!S.events[S.finEvent]) S.finEvent=(active[0]||evs[0]).id;
+  var ev=S.events[S.finEvent], c=calc(ev);
+  h+='<div class="toolbar"><h2 style="margin:0">Смета</h2>'+eventSelect("finEv",S.finEvent)+'<button data-act="editEvent" data-id="'+esc(ev.id)+'">Изменить ставки и бригаду</button></div>';
+  h+='<div class="cols"><div style="min-width:0">';
+  h+='<div class="panel"><h3>Аренда оборудования · '+c.d+' дн., коэффициент '+num(c.dayFactor,2)+'</h3><div class="tablebox"><table><thead><tr><th>Позиция</th><th class="num">Кол-во</th><th class="num">Ставка / день</th><th class="num">Сумма</th></tr></thead><tbody>'+
+    (c.rental.map(function(r){return '<tr><td class="wrap">'+esc(r.name)+'</td><td class="num">'+r.qty+'</td><td class="num">'+(r.rate?baht(r.rate):'<span class="pill warn">нет цены</span>')+'</td><td class="num">'+baht(r.sum)+'</td></tr>'}).join("")||'<tr><td colspan="4" class="muted">Нет оборудования</td></tr>')+'</tbody></table></div></div>';
+  h+='<div class="panel"><h3>Работы</h3><div class="tablebox"><table><thead><tr><th>Роль</th><th class="num">Людей</th><th class="num">Дней</th><th class="num">Ставка / чел.-день</th><th class="num">Сумма</th></tr></thead><tbody>'+
+    (c.crew.map(function(r){return '<tr><td>'+esc(r.role)+'</td><td class="num">'+r.people+'</td><td class="num">'+r.days+'</td><td class="num">'+baht(r.rate)+'</td><td class="num">'+baht(r.sum)+'</td></tr>'}).join("")||'<tr><td colspan="5" class="muted">Бригада не указана</td></tr>')+'</tbody></table></div></div>';
+  h+='<div class="panel"><h3>Логистика · '+num(c.km)+' км пробега</h3><div class="tablebox"><table><thead><tr><th>Трак</th><th class="num">Дней</th><th class="num">Км</th><th class="num">Сумма</th></tr></thead><tbody>'+
+    (c.logi.map(function(r){return '<tr><td>'+esc(r.name)+'</td><td class="num">'+r.days+'</td><td class="num">'+num(r.km)+'</td><td class="num">'+baht(r.sum)+'</td></tr>'}).join("")||'<tr><td colspan="4" class="muted">Транспорт не назначен</td></tr>')+'</tbody></table></div></div>';
+  h+='</div><div class="panel" style="position:sticky;top:calc(env(safe-area-inset-top,0px) + 70px)"><h2>'+esc(ev.name||"Без названия")+'</h2><p class="muted" style="margin:0 0 10px">'+esc([ev.client,ev.venue].filter(Boolean).join(" · "))+'</p>';
+  h+=sumLine("Аренда оборудования",c.rentalSum)+(c.disc?sumLine("Скидка на аренду "+n(ev.discount)+"%",-c.disc):"")+sumLine("Работы",c.crewSum)+sumLine("Логистика",c.logiSum)+c.extra.map(function(x){return sumLine(x.name||"Прочее",x.sum)}).join("")+sumLine("Без НДС",c.sub)+(ev.vat?sumLine("НДС "+n(S.settings.vat)+"%",c.vat):"")+'<div class="sumline total"><span>Итого</span><b>'+baht(c.total)+'</b></div>';
+  h+='<div style="margin-top:14px;padding-top:10px;border-top:1px dashed var(--line)"><h3>Внутренний учёт</h3>'+sumLine("Амортизация техники за "+c.d+" дн.",c.amort)+sumLine("Аренда за вычетом амортизации",c.rentalSum-c.disc-c.amort)+(c.noRate?'<div class="warnbox" style="margin-top:6px">У '+c.noRate+' позиций в смете нет цены аренды в прайсе.</div>':'')+'</div>';
+  h+='<button style="margin-top:12px" class="w100" data-act="copyQuote">Скопировать смету текстом</button></div></div>';
+  return h;
+}
+function sumLine(l,v){return '<div class="sumline"><span>'+esc(l)+'</span><b>'+baht(v)+'</b></div>'}
+function quoteText(ev){var c=calc(ev),L=[];L.push("Смета: "+(ev.name||""));L.push([ev.client,ev.venue,range(ev)].filter(Boolean).join(" · "));L.push("");
+  L.push("Аренда оборудования ("+c.d+" дн.):");c.rental.forEach(function(r){L.push("  "+r.name+" × "+r.qty+" — "+baht(r.sum))});if(c.disc)L.push("  Скидка "+n(ev.discount)+"% — −"+baht(c.disc));
+  L.push("Работы:");c.crew.forEach(function(r){L.push("  "+r.role+": "+r.people+" чел. × "+r.days+" дн. — "+baht(r.sum))});
+  L.push("Логистика:");c.logi.forEach(function(r){L.push("  "+r.name+" — "+baht(r.sum))});c.extra.forEach(function(x){L.push(x.name+" — "+baht(x.sum))});
+  L.push("");L.push("Без НДС: "+baht(c.sub));if(ev.vat)L.push("НДС "+n(S.settings.vat)+"%: "+baht(c.vat));L.push("ИТОГО: "+baht(c.total));return L.join("\n")}
+
+/* ---------- sheets (editors) ---------- */
+var sheetOpen=false;
+function openSheet(html,onBind){
+  sheetOpen=true; var root=$("#sheetroot");
+  root.innerHTML='<div class="sheet-bg" data-sheetbg><div class="sheet" role="dialog" aria-modal="true">'+html+'</div></div>';
+  var bg=root.firstChild; bg.addEventListener("click",function(e){ if(e.target===bg) closeSheet() });
+  onBind && onBind(root.querySelector(".sheet"));
+  var f=root.querySelector("input,select"); f&&f.focus();
+}
+function closeSheet(){ sheetOpen=false; $("#sheetroot").innerHTML=""; render() }
+document.addEventListener("keydown",function(e){ if(e.key==="Escape"&&sheetOpen) closeSheet() });
+function fld(label,id,val,type,extra){return '<label>'+label+'<input id="'+id+'" type="'+(type||"text")+'" value="'+esc(val==null?"":val)+'"'+(extra||"")+'></label>'}
+function confirmDel(sh,btnSel,label,fn){
+  var b=sh.querySelector(btnSel); if(!b) return;
+  b.addEventListener("click",function(){ var box=document.createElement("div"); box.className="confirm"; box.innerHTML='<span>'+label+'</span><button class="danger sm" type="button">Да, удалить</button><button class="sm" type="button">Отмена</button>';
+    b.replaceWith(box); box.children[1].onclick=fn; box.children[2].onclick=function(){box.replaceWith(b)} });
+}
+
+function itemSheet(id){
+  var it=id?clone(S.items[id]):{id:uid("i"),name:"",cat:"sound",qty:1,repair:0,L:60,W:60,H:60,kg:30,stackable:true,rate:0,loc:"",serials:"",note:""};
+  var h='<h1>'+(id?"Позиция склада":"Новая позиция")+'</h1><div class="grid">'+
+    '<label class="span2">Название<input id="f_name" value="'+esc(it.name)+'" placeholder="Например, Robe MegaPointe (кейс на 2 шт.)"></label>'+
+    '<label>Категория<select id="f_cat">'+Object.keys(CATS).map(function(k){return '<option value="'+k+'"'+(it.cat===k?" selected":"")+'>'+CATS[k].name+'</option>'}).join("")+'</select></label>'+
+    fld("Кол-во кейсов / единиц","f_qty",it.qty,"number",' min="0"')+fld("Из них в ремонте","f_repair",it.repair,"number",' min="0"')+'</div><div class="grid fin">'+fld("Ставка аренды, ฿ / сутки","f_rate",it.rate,"number",' min="0"')+fld("Стоимость единицы, ฿","f_value",it.value,"number",' min="0"')+fld("Амортизация, ฿ / день","f_amort",it.amort,"number",' min="0"')+'</div><div class="grid">'+fld("Подкатегория","f_sub",it.sub)+
+    '</div><h3>Кейс для перевозки'+(it.dimsEst?' · сейчас оценка, уточните':'')+'</h3><div class="grid">'+fld("Длина, см","f_L",it.L,"number")+fld("Ширина, см","f_W",it.W,"number")+fld("Высота, см","f_H",it.H,"number")+fld("Вес с кейсом, кг","f_kg",it.kg,"number")+
+    '<label style="flex-direction:row;align-items:center;gap:8px"><input id="f_stack" type="checkbox"'+(it.stackable?" checked":"")+'> Можно ставить в стек</label></div>'+
+    '<div class="grid">'+fld("Место хранения","f_loc",it.loc)+'<label class="span2">Серийные номера<textarea id="f_serials" rows="2">'+esc(it.serials||"")+'</textarea></label><label class="span2">Заметка<textarea id="f_note" rows="2">'+esc(it.note||"")+'</textarea></label></div>'+
+    '<div class="acts"><button class="primary w" id="b_save">Сохранить</button><button id="b_cancel">Отмена</button>'+(id?'<button class="danger w" id="b_del" style="margin-left:auto">Удалить</button>':'')+'</div>';
+  openSheet(h,function(sh){
+    $("#b_cancel",sh).onclick=closeSheet;
+    $("#b_save",sh).onclick=function(){
+      var name=$("#f_name",sh).value.trim(); if(!name){$("#f_name",sh).focus();toast("Укажите название");return}
+      var before=[it.L,it.W,it.H,it.kg].join("|");
+      it.name=name; it.cat=$("#f_cat",sh).value; it.sub=$("#f_sub",sh).value.trim(); ["qty","repair","rate","value","amort","L","W","H","kg"].forEach(function(k){it[k]=n($("#f_"+k,sh).value)});
+      if(before!==[it.L,it.W,it.H,it.kg].join("|")) delete it.dimsEst;
+      it.stackable=$("#f_stack",sh).checked; it.loc=$("#f_loc",sh).value.trim(); it.serials=$("#f_serials",sh).value; it.note=$("#f_note",sh).value;
+      if(id && S.items[id] && S.items[id].example) it.example=true;
+      save("items",it); closeSheet();
+    };
+    confirmDel(sh,"#b_del","Удалить позицию со склада?",function(){remove("items",id);closeSheet()});
+  });
+}
+function truckSheet(id){
+  var t=id?clone(S.trucks[id]):{id:uid("t"),name:"",plate:"",L:420,W:200,H:200,payload:3000,ratePerDay:4000,ratePerKm:15};
+  var h='<h1>'+(id?"Трак":"Новый трак")+'</h1><div class="grid"><label class="span2">Название<input id="f_name" value="'+esc(t.name)+'" placeholder="Например, 6-колёсный трак 4,2 м"></label>'+fld("Госномер","f_plate",t.plate)+
+    '</div><h3>Кузов изнутри</h3><div class="grid">'+fld("Длина, см","f_L",t.L,"number")+fld("Ширина, см","f_W",t.W,"number")+fld("Высота, см","f_H",t.H,"number")+fld("Грузоподъёмность, кг","f_payload",t.payload,"number")+
+    '</div><div class="fin"><h3>Тариф</h3><div class="grid">'+fld("За день, ฿","f_ratePerDay",t.ratePerDay,"number")+fld("За км, ฿","f_ratePerKm",t.ratePerKm,"number")+'</div></div>'+
+    '<div class="acts"><button class="primary w" id="b_save">Сохранить</button><button id="b_cancel">Отмена</button>'+(id?'<button class="danger w" id="b_del" style="margin-left:auto">Удалить</button>':'')+'</div>';
+  openSheet(h,function(sh){
+    $("#b_cancel",sh).onclick=closeSheet;
+    $("#b_save",sh).onclick=function(){ var name=$("#f_name",sh).value.trim(); if(!name){toast("Укажите название");return}
+      t.name=name; t.plate=$("#f_plate",sh).value.trim(); ["L","W","H","payload","ratePerDay","ratePerKm"].forEach(function(k){t[k]=n($("#f_"+k,sh).value)}); save("trucks",t); closeSheet() };
+    confirmDel(sh,"#b_del","Удалить трак из автопарка?",function(){remove("trucks",id);closeSheet()});
+  });
+}
+function eventSheet(id){
+  var ev=id?clone(S.events[id]):{id:uid("e"),name:"",client:"",venue:"",dateFrom:todayStr(),dateTo:todayStr(),status:"draft",items:[],truckIds:[],distanceKm:20,trips:1,crew:[{role:"Техники монтажа",people:4,days:1,rate:2000}],extra:[],discount:0,nextDayPct:100,vat:true,notes:""};
+  ev.items=ev.items||[]; ev.crew=ev.crew||[]; ev.extra=ev.extra||[]; ev.truckIds=ev.truckIds||[];
+  function itemsTable(){
+    if(!ev.items.length) return '<p class="muted">Оборудование ещё не добавлено.</p>';
+    return '<div class="tablebox"><table><thead><tr><th>Позиция</th><th class="num">Свободно</th><th class="num">Кол-во</th><th></th></tr></thead><tbody>'+ev.items.map(function(r,i){var it=S.items[r.itemId]; if(!it) return ''; var free=n(it.qty)-n(it.repair)-bookedFor(it.id,ev,ev.id), bad=n(r.qty)>free;
+      return '<tr><td class="wrap">'+esc(it.name)+'</td><td class="num"><span class="pill '+(bad?"bad":"ok")+'">'+Math.max(free,0)+'</span></td><td class="num"><input class="qty" type="number" min="0" data-iq="'+i+'" value="'+n(r.qty)+'" aria-label="количество"></td><td><button class="sm ghost" data-irm="'+i+'" aria-label="убрать">✕</button></td></tr>'}).join("")+'</tbody></table></div>';
+  }
+  function crewRows(){return ev.crew.map(function(c,i){return '<div class="inline" style="margin-bottom:6px"><input data-cf="role" data-ci="'+i+'" value="'+esc(c.role)+'" placeholder="Роль" style="flex:1 1 140px"><input class="qty" type="number" data-cf="people" data-ci="'+i+'" value="'+n(c.people)+'" title="Людей" aria-label="людей"><input class="qty" type="number" data-cf="days" data-ci="'+i+'" value="'+n(c.days)+'" title="Дней" aria-label="дней"><input type="number" style="width:96px" data-cf="rate" data-ci="'+i+'" value="'+n(c.rate)+'" title="Ставка ฿ за чел.-день" aria-label="ставка"><button class="sm ghost" data-crm="'+i+'" aria-label="убрать">✕</button></div>'}).join("")}
+  function extraRows(){return ev.extra.map(function(x,i){return '<div class="inline" style="margin-bottom:6px"><input data-xf="name" data-xi="'+i+'" value="'+esc(x.name)+'" placeholder="Например, суточные, топливо генератора" style="flex:1 1 160px"><input type="number" style="width:110px" data-xf="amount" data-xi="'+i+'" value="'+n(x.amount)+'" aria-label="сумма"><button class="sm ghost" data-xrm="'+i+'" aria-label="убрать">✕</button></div>'}).join("")}
+  var h='<h1>'+(id?"Сетап":"Новый сетап")+'</h1><div class="grid">'+
+    '<label class="span2">Название<input id="e_name" value="'+esc(ev.name)+'" placeholder="Например, Свадьба на вилле, Камала"></label>'+fld("Клиент","e_client",ev.client)+fld("Площадка / адрес","e_venue",ev.venue)+
+    fld("Начало","e_dateFrom",ev.dateFrom,"date")+fld("Окончание","e_dateTo",ev.dateTo,"date")+
+    '<label>Статус<select id="e_status">'+Object.keys(STATUSES).map(function(k){return '<option value="'+k+'"'+(ev.status===k?" selected":"")+'>'+STATUSES[k].name+'</option>'}).join("")+'</select></label></div>'+
+    '<div><h3>Оборудование</h3><div id="e_items">'+itemsTable()+'</div><div class="inline" style="margin-top:8px"><select id="e_pick" style="flex:1 1 220px">'+Object.keys(CATS).map(function(k){var g=sortedItems().filter(function(it){return (it.cat||"other")===k}); return g.length?'<optgroup label="'+esc(CATS[k].name)+'">'+g.map(function(it){return '<option value="'+esc(it.id)+'">'+esc(it.name)+'</option>'}).join("")+'</optgroup>':''}).join("")+'</select><input id="e_pickq" class="qty" type="number" min="1" value="1" aria-label="количество"><button id="e_add" type="button">Добавить</button></div></div>'+
+    '<div><h3>Транспорт</h3><div class="grid" style="margin-bottom:8px">'+sortedTrucks().map(function(t){var cnt=ev.truckIds.filter(function(x){return x===t.id}).length; return '<label>'+esc(t.name)+'<input type="number" min="0" max="9" data-truck="'+esc(t.id)+'" value="'+cnt+'" aria-label="сколько траков"></label>'}).join("")+'</div>'+
+    '<div class="grid">'+fld("Расстояние в одну сторону, км","e_distanceKm",ev.distanceKm,"number")+fld("Рейсов туда-обратно","e_trips",ev.trips,"number",' min="1"')+'</div></div>'+
+    '<div class="fin"><h3>Бригада · роль, людей, дней, ฿ за чел.-день</h3><div id="e_crew">'+crewRows()+'</div><button class="sm" id="e_addcrew" type="button">+ Роль</button></div>'+
+    '<div class="fin"><h3>Прочие расходы</h3><div id="e_extra">'+extraRows()+'</div><button class="sm" id="e_addx" type="button">+ Расход</button></div>'+
+    '<div class="fin"><h3>Условия</h3><div class="grid">'+fld("Скидка на аренду, %","e_discount",ev.discount,"number")+fld("Каждый следующий день аренды, % от ставки","e_nextDayPct",ev.nextDayPct==null?100:ev.nextDayPct,"number")+
+    '<label style="flex-direction:row;align-items:center;gap:8px"><input id="e_vat" type="checkbox"'+(ev.vat?" checked":"")+'> Начислять НДС '+n(S.settings.vat)+'%</label></div></div>'+
+    '<label class="f">Заметки<textarea id="e_notes" rows="3">'+esc(ev.notes||"")+'</textarea></label>'+
+    '<div class="panel fin" style="margin:0" id="e_total"></div>'+
+    '<div class="acts"><button class="primary w" id="b_save">Сохранить</button><button id="b_cancel">Отмена</button><button class="w" id="b_load" type="button">Сохранить и к погрузке</button>'+(id?'<button class="danger w" id="b_del" style="margin-left:auto">Удалить</button>':'')+'</div>';
+  openSheet(h,function(sh){
+    function readBasic(){ ["name","client","venue","dateFrom","dateTo","status","notes"].forEach(function(k){ev[k]=$("#e_"+k,sh).value}); if(ev.dateTo<ev.dateFrom) ev.dateTo=ev.dateFrom;
+      ["distanceKm","trips","discount","nextDayPct"].forEach(function(k){ev[k]=n($("#e_"+k,sh).value)}); ev.vat=$("#e_vat",sh).checked;
+      var ids=[]; Array.prototype.forEach.call(sh.querySelectorAll("[data-truck]"),function(inp){for(var i=0;i<n(inp.value);i++) ids.push(inp.dataset.truck)}); ev.truckIds=ids }
+    function total(){ readBasic(); var c=calc(ev); $("#e_total",sh).innerHTML=sumLine("Аренда",c.rentalSum-c.disc)+sumLine("Работы",c.crewSum)+sumLine("Логистика",c.logiSum)+sumLine("Прочее",c.extraSum)+'<div class="sumline total"><span>Итого'+(ev.vat?" с НДС":"")+'</span><b>'+baht(c.total)+'</b></div>' }
+    function redrawItems(){ $("#e_items",sh).innerHTML=itemsTable(); total() }
+    sh.addEventListener("input",function(e){ var t=e.target;
+      if(t.dataset.iq!=null){ ev.items[+t.dataset.iq].qty=n(t.value) }
+      if(t.dataset.ci!=null){ ev.crew[+t.dataset.ci][t.dataset.cf]= t.dataset.cf==="role"?t.value:n(t.value) }
+      if(t.dataset.xi!=null){ ev.extra[+t.dataset.xi][t.dataset.xf]= t.dataset.xf==="name"?t.value:n(t.value) }
+      total() });
+    sh.addEventListener("change",function(e){ if(e.target.dataset.iq!=null || e.target.id==="e_dateFrom" || e.target.id==="e_dateTo") redrawItems() });
+    sh.addEventListener("click",function(e){ var t=e.target.closest("button"); if(!t) return;
+      if(t.dataset.irm!=null){ ev.items.splice(+t.dataset.irm,1); redrawItems() }
+      if(t.dataset.crm!=null){ ev.crew.splice(+t.dataset.crm,1); $("#e_crew",sh).innerHTML=crewRows(); total() }
+      if(t.dataset.xrm!=null){ ev.extra.splice(+t.dataset.xrm,1); $("#e_extra",sh).innerHTML=extraRows(); total() } });
+    $("#e_add",sh).onclick=function(){ var iid=$("#e_pick",sh).value, q=Math.max(1,n($("#e_pickq",sh).value)); if(!iid) return;
+      var ex=ev.items.filter(function(r){return r.itemId===iid})[0]; if(ex) ex.qty=n(ex.qty)+q; else ev.items.push({itemId:iid,qty:q}); redrawItems() };
+    $("#e_addcrew",sh).onclick=function(){ ev.crew.push({role:"",people:1,days:days(ev),rate:1500}); $("#e_crew",sh).innerHTML=crewRows(); total() };
+    $("#e_addx",sh).onclick=function(){ ev.extra.push({name:"",amount:0}); $("#e_extra",sh).innerHTML=extraRows(); total() };
+    $("#b_cancel",sh).onclick=closeSheet;
+    function doSave(){ readBasic(); if(!ev.name.trim()){ $("#e_name",sh).focus(); toast("Укажите название сетапа"); return false } ev.name=ev.name.trim(); save("events",ev); return true }
+    $("#b_save",sh).onclick=function(){ if(doSave()) closeSheet() };
+    $("#b_load",sh).onclick=function(){ if(doSave()){ S.loadEvent=ev.id; sheetOpen=false; $("#sheetroot").innerHTML=""; if(location.hash!=="#loading") location.hash="loading"; else render() } };
+    confirmDel(sh,"#b_del","Удалить сетап вместе со сметой и чек-листом?",function(){remove("events",id);closeSheet()});
+    total();
+  });
+}
+
+/* ---------- bindings ---------- */
+function bind(app){
+  var q=$("#invQ",app); if(q) q.oninput=function(){ S.invQ=q.value; var pos=q.selectionStart; render(); var q2=$("#invQ"); q2.focus(); try{q2.setSelectionRange(pos,pos)}catch(e){} };
+  var c=$("#invCat",app); if(c) c.onchange=function(){S.invCat=c.value;render()};
+  var le=$("#loadEv",app); if(le) le.onchange=function(){S.loadEvent=le.value;render()};
+  var fe=$("#finEv",app); if(fe) fe.onchange=function(){S.finEvent=fe.value;render()};
+  Array.prototype.forEach.call(app.querySelectorAll("[data-chk]"),function(cb){ cb.onchange=function(){ var ev=S.events[S.loadEvent]; var chk=clone(ev.check||{}); var k=cb.dataset.chk; chk[k]=chk[k]||{}; chk[k][cb.dataset.f]=cb.checked; patchEvent(ev.id,{check:chk}) } });
+}
+document.addEventListener("click",function(e){
+  var t=e.target.closest("[data-act]"); if(!t || t.closest("#sheetroot")) return;
+  var a=t.dataset.act, id=t.dataset.id;
+  if(a==="newItem") itemSheet(null); else if(a==="editItem") itemSheet(id);
+  else if(a==="newTruck") truckSheet(null); else if(a==="editTruck") truckSheet(id);
+  else if(a==="newEvent") eventSheet(null); else if(a==="editEvent") eventSheet(id);
+  else if(a==="roles") rolesSheet();
+  else if(a==="finPick"){ S.finEvent=id; render(); var tb=document.querySelector("#finEv"); tb&&tb.scrollIntoView({behavior:"smooth",block:"center"}) }
+  else if(a==="applyTrucks"){ patchEvent(S.loadEvent,{truckIds:t.dataset.ids.split(",")}); toast("Транспорт назначен") }
+  else if(a==="resetCheck"){ patchEvent(S.loadEvent,{check:{}}) }
+  else if(a==="copyQuote"){ var txt=quoteText(S.events[S.finEvent]); try{ navigator.clipboard.writeText(txt).then(function(){toast("Смета скопирована")},function(){showText(txt)}) }catch(err){ showText(txt) } }
+});
+function showText(txt){ openSheet('<h1>Смета текстом</h1><p class="muted">Выделите и скопируйте.</p><textarea id="qtxt" rows="20" class="w100" readonly>'+esc(txt)+'</textarea><div class="acts"><button id="b_cancel">Закрыть</button></div>',function(sh){$("#b_cancel",sh).onclick=closeSheet; var ta=$("#qtxt",sh); ta.focus(); ta.select()}) }
+window.addEventListener("hashchange",function(){ if(sheetOpen){ sheetOpen=false; $("#sheetroot").innerHTML="" } render() });
+
+/* ---------- demo fallback (used only when the store is unavailable) ---------- */
+function demoData(){
+  var I=function(id,name,cat,qty,L,W,H,kg,st,rate,loc){return {id:id,name:name,cat:cat,qty:qty,repair:0,L:L,W:W,H:H,kg:kg,stackable:st,rate:rate,loc:loc,example:true}};
+  var items=[I("i-k2","L-Acoustics K2, линейный массив (кейс на 1)","sound",12,135,75,60,70,true,3500,"Склад A, ряд 1"),I("i-ks28","L-Acoustics KS28, сабвуфер на колёсах","sound",8,140,70,58,85,false,2800,"Склад A, ряд 2"),
+    I("i-sd12","DiGiCo SD12, пульт в кейсе","sound",2,130,80,45,72,false,6000,"Склад A, стеллаж"),I("i-mega","Robe MegaPointe (кейс на 2 шт.)","light",8,95,60,75,68,true,2400,"Склад B, ряд 1"),
+    I("i-ma3","grandMA3 light, пульт в кейсе","light",1,110,75,45,55,false,5000,"Склад B, стеллаж"),I("i-led","LED-экран 2,6 мм (кейс на 6 кабинетов)","video",10,120,60,110,125,false,3000,"Склад C"),
+    I("i-motor","Моторы CM Lodestar 1 т (кейс на 1)","rig",8,60,45,60,58,true,900,"Склад D"),I("i-truss","Ферма Prolyte H30V, 3 м","rig",16,300,30,30,22,true,350,"Склад D, стеллаж"),
+    I("i-distro","Дистрибьютор питания 63 А","power",3,60,60,80,85,false,1500,"Склад C"),I("i-cable","Кейс кабелей (силовые и DMX)","power",6,120,60,60,90,true,600,"Склад C")];
+  var trucks=[{id:"t-6w",name:"6-колёсный трак 4,2 м",plate:"",L:420,W:200,H:200,payload:3000,ratePerDay:4500,ratePerKm:18,example:true},{id:"t-10w",name:"10-колёсный трак 7,2 м",plate:"",L:720,W:235,H:240,payload:8000,ratePerDay:9000,ratePerKm:28,example:true}];
+  var d=new Date(), iso=function(add){var x=new Date(d.getTime()+add*864e5);return x.toISOString().slice(0,10)};
+  var events=[{id:"e-wed",name:"Свадьба на вилле",client:"Wedding-агентство",venue:"Камала",dateFrom:iso(10),dateTo:iso(11),status:"confirmed",example:true,
+      items:[{itemId:"i-k2",qty:8},{itemId:"i-ks28",qty:4},{itemId:"i-sd12",qty:1},{itemId:"i-mega",qty:4},{itemId:"i-ma3",qty:1},{itemId:"i-motor",qty:4},{itemId:"i-truss",qty:8},{itemId:"i-distro",qty:1},{itemId:"i-cable",qty:3}],
+      truckIds:["t-10w","t-6w"],distanceKm:25,trips:1,crew:[{role:"Звукорежиссёр",people:1,days:2,rate:4000},{role:"Художник по свету",people:1,days:2,rate:4000},{role:"Техники монтажа",people:6,days:2,rate:1800},{role:"Риггер",people:2,days:1,rate:3000}],
+      extra:[{name:"Питание бригады",amount:4800}],discount:10,nextDayPct:50,vat:true,notes:""}];
+  return {items:items,trucks:trucks,events:events};
+}
+function goDemo(){
+  S.demo=true; var d=demoData(); ["items","trucks","events"].forEach(function(k){ d[k].forEach(function(o){var p=split(k,o); RAW[k][o.id]=p.pub; FINDOCS[PREFIX[k]+o.id]=p.fin}); S.loaded[k]=true }); rebuild();
+  $("#syncdot").className="dot demo"; $("#synctext").textContent="Демо-режим"; $("#demobanner").hidden=false; render();
+}
+
+/* ---------- boot ---------- */
+setTab(); render();
+var ROLES={admin:{name:"Руководитель",cls:"acc"},staff:{name:"Склад и логистика",cls:"ok"},view:{name:"Только просмотр",cls:""}};
+function roleKey(){return ROLE.admin?"admin":ROLE.write?"staff":"view"}
+function applyRole(){
+  document.documentElement.classList.toggle("ro",!ROLE.write);
+  document.documentElement.classList.toggle("nofin",!ROLE.admin);
+  var r=ROLES[roleKey()], b=$("#rolebtn"); b.hidden=false; b.innerHTML='<span class="pill '+r.cls+'">'+r.name+'</span>';
+}
+function start(){
+  if(!window.claude || !window.claude.use){ goDemo(); applyRole(); return }
+  window.claude.use("db").then(function(d){
+    if(!d){ goDemo(); applyRole(); return }
+    db=d; $("#syncdot").className="dot on"; $("#synctext").textContent="Синхронизировано";
+    window.claude.use("user").then(function(u){
+      if(!u){ ROLE={admin:false,write:true,known:false}; return }
+      return Promise.all([u.canEdit(),u.can("data.write")]).then(function(r){ ROLE={admin:!!r[0],write:r[0]||r[1]!==false,known:true} });
+    }).catch(function(){ ROLE={admin:false,write:true,known:false} }).then(function(){
+      applyRole(); render();
+      ["items","trucks","events"].forEach(function(coll){
+        db.collection(coll).limit(1000).onSnapshot(function(snap){
+          var m={}; snap.docs.forEach(function(doc){ var o=clone(doc.data()); o.id=doc.id; m[doc.id]=o }); RAW[coll]=m; S.loaded[coll]=true; rebuild(); render();
+        },function(){ $("#syncdot").className="dot"; $("#synctext").textContent="Нет связи с хранилищем"; S.loaded[coll]=true; render() });
+      });
+      if(ROLE.admin) db.collection("fin").limit(1000).onSnapshot(function(snap){ var m={}; snap.docs.forEach(function(doc){m[doc.id]=clone(doc.data())}); FINDOCS=m; rebuild(); render() },function(){});
+    });
+  },function(){ goDemo(); applyRole() });
+}
+function rolesSheet(){
+  var cur=roleKey();
+  var rows=[["Склад: оборудование, количество, места, ремонт","✓","✓","смотрит"],["Сетапы: даты, оборудование, транспорт","✓","✓","смотрит"],["Погрузка: схема и чек-лист","✓","✓ отмечает","смотрит"],["Автопарк","✓","✓","смотрит"],["Цены аренды, стоимость и амортизация","✓","скрыто","скрыто"],["Финансы, сметы, ставки бригады","✓","скрыто","скрыто"]];
+  openSheet('<h1>Роли и доступ</h1><p>Ваша роль: <span class="pill '+ROLES[cur].cls+'">'+ROLES[cur].name+'</span></p>'+
+    '<div class="tablebox"><table><thead><tr><th></th><th>Руководитель</th><th>Склад и логистика</th><th>Только просмотр</th></tr></thead><tbody>'+rows.map(function(r){return '<tr><td class="wrap">'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td><td class="muted">'+r[3]+'</td></tr>'}).join("")+'</tbody></table></div>'+
+    '<h3>Как выдать роль</h3><p style="margin:0">Роль задаётся в меню «Поделиться» этой страницы: <b>Editor</b> — руководитель, <b>Contributor</b> — склад и логистика, <b>Viewer</b> — только просмотр. Цены и финансы скрыты на уровне хранилища: без роли руководителя их нельзя получить даже в обход интерфейса.</p>'+
+    '<div class="acts"><button id="b_cancel">Закрыть</button></div>',function(sh){$("#b_cancel",sh).onclick=closeSheet});
+}
+start();
+})();
+</script>
