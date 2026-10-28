@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>LOTUS Конструктор сетапов</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
@@ -38,7 +39,7 @@ html,body{margin:0}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.45}
 [hidden]{display:none!important}
 .wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1600px;margin:0 auto}
-header.top{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
 .topin{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-block:10px}
 .brand{display:flex;align-items:baseline;gap:10px}
 .brand b{font-family:var(--f-display);font-weight:700;font-size:18px;letter-spacing:.14em}
@@ -137,9 +138,10 @@ tfoot td{font-weight:600;background:var(--sunken)}
   <div class="topact">
     <select id="preset" aria-label="Шаблон"><option value="">Шаблон…</option><option value="concert">Концерт: сцена 12×8</option><option value="club">Клуб: сцена 8×5, DJ</option><option value="conf">Конференция: сцена 10×4, экран</option><option value="empty">Пустая площадка</option></select>
     <button class="sm" data-act="undo" title="Ctrl+Z">Отменить</button>
-    <button class="sm" data-act="export">Сохранить файл</button>
+    <button class="sm" data-act="copy" id="copyBtn">Копировать список</button>
+    <button class="sm" data-act="export" data-file>Сохранить файл</button>
     <button class="sm" data-act="import">Открыть файл</button>
-    <button class="sm" data-act="print">Печать / PDF</button>
+    <button class="sm" data-act="print" data-file>Печать / PDF</button>
     <input type="file" id="fileIn" accept=".json,application/json" hidden>
   </div>
 </div></header>
@@ -708,7 +710,8 @@ document.addEventListener("click",function(e){
   else if(act==="fit"){ fitView(); renderPlan(lastR) }
   else if(act==="desel"){ sel=null; all() }
   else if(act==="center"){ push(); S.stage.x=r2((S.venue.w-S.stage.w)/2); all() }
-  else if(act==="clear"){ if(confirm("Убрать всё оборудование с плана?")){ push(); S.objs=[]; sel=null; all() } }
+  else if(act==="clear"){ if(b.dataset.armed){ push(); S.objs=[]; sel=null; all() } else { b.dataset.armed="1"; b.textContent="Нажмите ещё раз, чтобы очистить" } }
+  else if(act==="copy") copyList(b);
   else if(act==="export"){ var blob=new Blob([JSON.stringify(S,null,1)],{type:"application/json"}), u=URL.createObjectURL(blob), l=document.createElement("a"); l.href=u; l.download=(S.name||"setup").replace(/[\\/:*?"<>|]+/g,"_")+".json"; document.body.appendChild(l); l.click(); l.remove(); setTimeout(function(){URL.revokeObjectURL(u)},1000) }
   else if(act==="import") $("#fileIn").click();
   else if(act==="print"){ var m=mode; if(m!=="front") renderFront(); window.print() }
@@ -724,9 +727,9 @@ document.addEventListener("click",function(e){
 document.addEventListener("change",function(e){
   var t=e.target;
   if(t.dataset.show){ show[t.dataset.show]=t.checked; renderPlan(lastR); return }
-  if(t.id==="preset"&&t.value){ if(!S.objs.length||confirm("Заменить текущий план шаблоном?")){ push(); S=preset(t.value); sel=null; view=null; all() } t.value=""; return }
+  if(t.id==="preset"&&t.value){ push(); S=preset(t.value); sel=null; view=null; all(); t.value=""; return }
   if(t.id==="setupName"){ S.name=t.value; save(); return }
-  if(t.id==="fileIn"&&t.files[0]){ var r=new FileReader(); r.onload=function(){ try{ var s=JSON.parse(r.result); if(!s.venue||!s.objs) throw 0; push(); S=s; sel=null; view=null; all() }catch(err){ alert("Это не файл сетапа.") } }; r.readAsText(t.files[0]); t.value=""; return }
+  if(t.id==="fileIn"&&t.files[0]){ var r=new FileReader(); r.onload=function(){ try{ var s=JSON.parse(r.result); if(!s.venue||!s.objs) throw 0; push(); S=s; sel=null; view=null; all() }catch(err){ $("#warns").innerHTML="<li>Этот файл не похож на сохранённый сетап. Откройте .json, сохранённый конструктором.</li>" } }; r.readAsText(t.files[0]); t.value=""; return }
   var f=t.dataset.f; if(!f) return; push();
   var o=sel&&obj(sel);
   if(f==="on"){ o.on=t.value; if(t.value==="air"&&!o.z) o.z=6; all(); return }
@@ -778,6 +781,16 @@ document.addEventListener("keydown",function(e){
 });
 window.addEventListener("resize",function(){ view=null; renderPlan(lastR) });
 
+function listText(){ var R=lastR, L=[S.name, "Площадка "+num(S.venue.w)+"×"+num(S.venue.d)+" м, сцена "+num(S.stage.w)+"×"+num(S.stage.d)+"×"+num(S.stage.h)+" м", "", "ОБОРУДОВАНИЕ"];
+  Object.keys(CATS).forEach(function(c){ var its=Object.keys(R.need).map(function(id){return ITEMS[id]}).filter(function(it){return it&&it.cat===c}); if(!its.length) return; L.push("— "+CATS[c].name); its.forEach(function(it){ L.push(it.name+"\t"+R.need[it.id]+(it.qty>0&&R.need[it.id]>it.qty?"\t(на складе "+it.qty+")":"")) }) });
+  L.push("","КАБЕЛИ"); CABLE_ORDER.forEach(function(t){ var x=R.cab[t]; if(!x.runs) return; L.push(CABLES[t].name+"\t"+num(x.load,0)+" м\t"+Object.keys(x.pcs).map(Number).sort(function(a,b){return a-b}).map(function(l){return num(l)+" м × "+x.pcs[l]}).join(", ")) });
+  return L.join("\n") }
+function copyList(b){ var t=listText(); function done(){ b.textContent="Скопировано"; setTimeout(function(){b.textContent="Копировать список"},1600) }
+  function fallback(){ var ta=document.createElement("textarea"); ta.value=t; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); try{ document.execCommand("copy"); done() }catch(e){} ta.remove() }
+  try{ navigator.clipboard.writeText(t).then(done,fallback) }catch(e){ fallback() } }
+// Inside an embedded viewer downloads and printing are blocked, so those buttons only show when the page is opened as a file.
+var embedded=false; try{ embedded=window.self!==window.top }catch(e){ embedded=true }
+if(embedded) document.querySelectorAll("[data-file]").forEach(function(x){x.hidden=true});
 S=load(); renderCatalog(); bindPlan(); all();
 })();
 </script>
