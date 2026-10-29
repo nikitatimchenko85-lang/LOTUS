@@ -1,0 +1,1179 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>LOTUS Конструктор сетапов</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: top bar; three columns (catalog | stage canvas | inspector) with results (equipment, cables) under the canvas. Same tokens as LOTUS so it can become a tab there. */
+:root{
+  --bg:#F3F5F6; --surface:#FFFFFF; --sunken:#E9EDEF; --fg:#15191D; --muted:#5B6670; --line:#D9DFE3;
+  --accent:#B3306A; --accent-soft:#F6E3EC; --accent-ink:#FFFFFF;
+  --ok:#2C7A4B; --ok-soft:#E1F1E7; --warn:#A86A12; --warn-soft:#FBEFD9; --bad:#BC3328; --bad-soft:#F8E1DE;
+  --c-rig:#6656C8; --c-power:#B0601C; --c-light:#A9850F; --c-video:#2B78AD; --c-sound:#2A836A; --c-stage:#94478A; --c-sfx:#C2475A; --c-dj:#4F6BB8; --c-cam:#3D8C99; --c-other:#66727C;
+  --floor:#FAFBFB; --grid:#E3E8EB; --grid2:#CDD5DA; --stage:#ECE4EA; --stage-edge:#94478A; --foh:#E4EEF5;
+  --f-display:"Unbounded","Onest",system-ui,sans-serif;
+  --f-body:"Onest",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:8px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1215; --surface:#161B1F; --sunken:#1D2328; --fg:#E6EBEE; --muted:#93A0A9; --line:#2A3238;
+  --accent:#E0679C; --accent-soft:#3A1F2C; --accent-ink:#1A0E14;
+  --ok:#5CC38A; --ok-soft:#173326; --warn:#E3A84B; --warn-soft:#382A14; --bad:#F07A6E; --bad-soft:#3B1D1A;
+  --c-rig:#9488E6; --c-power:#E08B48; --c-light:#E0C04A; --c-video:#5BA8DE; --c-sound:#4FC0A0; --c-stage:#CC7DC0; --c-sfx:#EC7A8B; --c-dj:#8098E6; --c-cam:#62BFCB; --c-other:#9AA6AF;
+  --floor:#12171A; --grid:#1E252A; --grid2:#2C353C; --stage:#2A2029; --stage-edge:#CC7DC0; --foh:#16252F;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1215; --surface:#161B1F; --sunken:#1D2328; --fg:#E6EBEE; --muted:#93A0A9; --line:#2A3238;
+  --accent:#E0679C; --accent-soft:#3A1F2C; --accent-ink:#1A0E14;
+  --ok:#5CC38A; --ok-soft:#173326; --warn:#E3A84B; --warn-soft:#382A14; --bad:#F07A6E; --bad-soft:#3B1D1A;
+  --c-rig:#9488E6; --c-power:#E08B48; --c-light:#E0C04A; --c-video:#5BA8DE; --c-sound:#4FC0A0; --c-stage:#CC7DC0; --c-sfx:#EC7A8B; --c-dj:#8098E6; --c-cam:#62BFCB; --c-other:#9AA6AF;
+  --floor:#12171A; --grid:#1E252A; --grid2:#2C353C; --stage:#2A2029; --stage-edge:#CC7DC0; --foh:#16252F;
+  color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.45}
+[hidden]{display:none!important}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1600px;margin:0 auto}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.topin{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-block:10px}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand b{font-family:var(--f-display);font-weight:700;font-size:18px;letter-spacing:.14em}
+.brand span{color:var(--muted);font-size:12px}
+.topact{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+main{padding-block:16px 60px}
+h2{font-family:var(--f-display);font-weight:500;font-size:15px;margin:0 0 10px;letter-spacing:.02em}
+h3{font-size:11px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+input,select{font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0}
+input[type=number]{font-family:var(--f-mono);font-size:13px;width:100%}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+button{font:inherit;font-weight:500;cursor:pointer;border-radius:6px;padding:6px 11px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+button:hover{background:var(--sunken)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.primary:hover{filter:brightness(1.07);background:var(--accent)}
+button.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+button.danger{color:var(--bad);border-color:var(--bad)}
+button.sm{padding:3px 8px;font-size:12px}
+button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.layout{display:grid;grid-template-columns:270px minmax(0,1fr) 300px;gap:14px;align-items:start}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px}
+.side{position:sticky;top:70px;max-height:calc(100vh - 84px);overflow:auto}
+/* catalog */
+.cat-h{display:flex;align-items:center;gap:6px;margin:12px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.cat-h i{width:9px;height:9px;border-radius:2px;display:inline-block}
+.eq{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:5px 7px;border:1px solid transparent;border-radius:6px;background:transparent;font-weight:400;cursor:grab}
+.eq:hover{background:var(--sunken);border-color:var(--line)}
+.eq span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.eq small{font-family:var(--f-mono);color:var(--muted);font-size:11px}
+/* canvas */
+.canvasbox{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.ctool{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line)}
+.ctool .sp{flex:1}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border:0;border-radius:0}
+svg.plan{display:block;width:100%;height:min(68vh,720px);background:var(--floor);touch-action:none;user-select:none;-webkit-user-select:none}
+svg.front{display:block;width:100%;height:min(52vh,520px);background:var(--floor)}
+.v3{position:relative;height:min(68vh,720px);background:var(--floor)}
+.v3msg{position:absolute;inset:0;display:grid;place-items:center;margin:0;color:var(--muted)}
+.v3bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:8px 10px;border-top:1px solid var(--line)}
+.v3bar .sp{flex:1}
+.layers-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.layers{display:flex;flex-direction:column;gap:2px}
+.layer{display:flex;align-items:center;gap:4px;border-radius:6px}
+.layer:hover{background:var(--sunken)}
+.layer.off .lname{color:var(--muted);text-decoration:line-through}
+.layer.empty .lname{color:var(--muted)}
+.layer small{font-family:var(--f-mono);font-size:11px;color:var(--muted);min-width:22px;text-align:right}
+.lbtn{border:0;background:transparent;padding:4px 5px;color:var(--muted);line-height:0}
+.lbtn[aria-pressed="true"]{background:transparent;color:var(--fg)}
+.lname{flex:1;min-width:0;text-align:left;border:0;background:transparent;padding:4px 2px;font-weight:400;display:flex;gap:7px;align-items:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lname i{width:9px;height:9px;border-radius:2px;flex:none}
+svg.plan.drawing{cursor:crosshair}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);padding:8px 10px;border-top:1px solid var(--line)}
+.legend label{display:inline-flex;gap:5px;align-items:center;cursor:pointer}
+.legend i{width:16px;height:3px;border-radius:2px;display:inline-block}
+.obj{cursor:move}
+.obj.sel .body{stroke:var(--accent);stroke-width:.06}
+.handle{fill:var(--surface);stroke:var(--accent);stroke-width:.05;cursor:crosshair}
+.lbl{font-family:var(--f-body);fill:var(--fg);pointer-events:none}
+.dim{font-family:var(--f-mono);fill:var(--muted);pointer-events:none}
+/* inspector */
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.f.full{grid-column:1/-1}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.sep{height:1px;background:var(--line);margin:14px 0}
+.hint{font-size:12px;color:var(--muted);margin:6px 0 0}
+.selname{font-weight:600;margin:0 0 2px}
+/* results */
+.results{margin-top:14px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:9px 12px}
+.stat small{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em}
+.stat b{font-family:var(--f-mono);font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.stat.bad b{color:var(--bad)}
+.tabs2{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
+.tabs2 button{border-radius:999px;border-color:transparent;color:var(--muted)}
+.tabs2 button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.tablebox{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;background:var(--sunken);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-family:var(--f-mono);font-size:13px;white-space:nowrap}
+tr.grp td{background:var(--sunken);font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+tfoot td{font-weight:600;background:var(--sunken)}
+.pill{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--sunken);color:var(--muted);margin-left:6px;vertical-align:1px}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.neg{color:var(--bad);font-weight:600}
+.warns{margin:0 0 12px;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.warns li{background:var(--warn-soft);color:var(--warn);border-radius:6px;padding:7px 10px;font-size:13px}
+.swatch{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:8px;vertical-align:middle}
+.pieces{font-family:var(--f-mono);font-size:12.5px;color:var(--muted)}
+.mono{font-family:var(--f-mono)}
+@media (max-width:1100px){.layout{grid-template-columns:240px minmax(0,1fr)} .insp{grid-column:1/-1;position:static;max-height:none}}
+@media (max-width:760px){header.top{position:static} .v3{height:60vh} .layout{grid-template-columns:minmax(0,1fr)} .side{position:static;max-height:340px} svg.plan{height:60vh}}
+@media print{
+  header.top .topact,.catalog,.ctool,.insp,.legend,.tabs2,#fileIn{display:none!important}
+  .layout{display:block} .canvasbox,.panel,.tablebox{border:0}
+  body{background:#fff} svg.plan{height:auto;aspect-ratio:var(--ar,1.4)} #frontwrap{display:block!important}
+  .results [data-pane]{display:block!important;break-inside:avoid;margin-bottom:16px}
+}
+@media (prefers-reduced-motion:no-preference){button{transition:background .15s,border-color .15s}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap topin">
+  <div class="brand"><b>LOTUS</b><span>Конструктор сетапов</span></div>
+  <input id="setupName" aria-label="Название сетапа" style="flex:0 1 260px">
+  <div class="topact">
+    <select id="preset" aria-label="Шаблон"><option value="">Шаблон…</option><option value="concert">Концерт: сцена 12×8</option><option value="club">Клуб: сцена 8×5, DJ</option><option value="conf">Конференция: сцена 10×4, экран</option><option value="empty">Пустая площадка</option></select>
+    <button class="sm" data-act="undo" title="Ctrl+Z">Отменить</button>
+    <button class="sm" data-act="copy" id="copyBtn">Копировать список</button>
+    <button class="sm" data-act="export" data-file>Сохранить файл</button>
+    <button class="sm" data-act="import">Открыть файл</button>
+    <button class="sm" data-act="print" data-file>Печать / PDF</button>
+    <input type="file" id="fileIn" accept=".json,application/json" hidden>
+  </div>
+</div></header>
+
+<main class="wrap">
+  <div class="layout">
+    <aside class="panel side catalog">
+      <div id="layers"></div>
+      <div class="sep"></div>
+      <h2>Оборудование</h2>
+      <input id="q" type="search" placeholder="Поиск по складу" style="width:100%">
+      <p class="hint">Перетащите позицию на план или нажмите, чтобы поставить в центр сцены.</p>
+      <div id="catalog"></div>
+    </aside>
+
+    <section>
+      <div class="canvasbox">
+        <div class="ctool">
+          <div class="seg"><button class="sm" data-view="plan" aria-pressed="true">План</button><button class="sm" data-view="front" aria-pressed="false">Вид из зала</button><button class="sm" data-view="3d" aria-pressed="false">3D</button></div>
+          <button class="sm" data-act="draw" id="drawBtn" aria-pressed="false" title="Клик ставит точку, концы прилипают к другим фермам. Esc или двойной клик заканчивает.">Рисовать ферму</button>
+          <span id="drawOpts" hidden style="display:inline-flex;gap:6px;align-items:center"><select id="drawItem" aria-label="Тип фермы"></select><label class="hint" style="margin:0;display:inline-flex;gap:4px;align-items:center">h<input type="number" id="drawZ" value="7" step=".5" style="width:64px"> м</label></span>
+          <span class="sp"></span>
+          <label class="hint" style="margin:0;display:inline-flex;gap:5px;align-items:center"><input type="checkbox" id="snap" checked> Шаг 0,25 м</label>
+          <button class="sm" data-act="zin" aria-label="Приблизить">+</button><button class="sm" data-act="zout" aria-label="Отдалить">−</button><button class="sm" data-act="fit">Вписать</button>
+        </div>
+        <div id="planwrap"><svg class="plan" id="plan" xmlns="http://www.w3.org/2000/svg"></svg></div>
+        <div id="wrap3d" hidden><div id="v3" class="v3"><p id="v3msg" class="v3msg">Загружаю 3D…</p></div>
+          <div class="v3bar"><span class="hint" style="margin:0">Вращать: тянуть мышью или пальцем · сдвиг: правая кнопка или Shift · масштаб: колесо или щипок · клик выбирает прибор</span><span class="sp"></span>
+            <button class="sm" data-cam="persp">3/4</button><button class="sm" data-cam="foh">С пульта</button><button class="sm" data-cam="top">Сверху</button><button class="sm" data-cam="side">Сбоку</button><label class="hint" style="margin:0;display:inline-flex;gap:5px;align-items:center"><input type="checkbox" id="beams" checked> Лучи</label></div></div>
+        <div id="frontwrap" hidden><svg class="front" id="front" xmlns="http://www.w3.org/2000/svg"></svg></div>
+        <div class="legend" id="legend"></div>
+      </div>
+
+      <div class="results">
+        <div class="stats" id="stats"></div>
+        <ul class="warns" id="warns"></ul>
+        <div class="tabs2"><button data-pane-btn="eq" aria-pressed="true">Оборудование</button><button data-pane-btn="cab" aria-pressed="false">Кабели</button><button data-pane-btn="truss" aria-pressed="false">Фермы</button></div>
+        <div data-pane="eq" id="eqTable"></div>
+        <div data-pane="cab" id="cabTable" hidden></div>
+        <div data-pane="truss" id="trussTable" hidden></div>
+      </div>
+    </section>
+
+    <aside class="panel side insp" id="insp"></aside>
+  </div>
+</main>
+
+<script>
+(function(){
+"use strict";
+/* Equipment catalog from LOTUS (import/equip.tsv). Ids match LOTUS items, so on merge this list is replaced by S.items. */
+var CATALOG = [{"id":"eq-001","name":"D&B Audiotechnik J8/J12","cat":"sound","sub":"ЗВУК — акустика","qty":36},{"id":"eq-002","name":"D&B Audiotechnik V8/V12SUB","cat":"sound","sub":"ЗВУК — акустика","qty":16},{"id":"eq-003","name":"D&B Audiotechnik J-SUB","cat":"sound","sub":"ЗВУК — акустика","qty":20},{"id":"eq-004","name":"D&B Audiotechnik J-INFRA","cat":"sound","sub":"ЗВУК — акустика","qty":4},{"id":"eq-005","name":"D&B Audiotechnik M4","cat":"sound","sub":"ЗВУК — акустика","qty":8},{"id":"eq-006","name":"D&B Audiotechnik V-SUB","cat":"sound","sub":"ЗВУК — акустика","qty":6},{"id":"eq-007","name":"Yamaha CHR15","cat":"sound","sub":"ЗВУК — акустика","qty":2},{"id":"eq-008","name":"Behringer Eurolive B205D","cat":"sound","sub":"ЗВУК — акустика","qty":4},{"id":"eq-009","name":"L'Acoustics KS28","cat":"sound","sub":"ЗВУК — акустика","qty":4},{"id":"eq-010","name":"D&B Audiotechnik D80","cat":"sound","sub":"ЗВУК — усилители","qty":30},{"id":"eq-011","name":"D&B Audiotechnik D12","cat":"sound","sub":"ЗВУК — усилители","qty":12},{"id":"eq-012","name":"D&B Audiotechnik R70","cat":"sound","sub":"ЗВУК — усилители","qty":1},{"id":"eq-013","name":"Yamaha PX10","cat":"sound","sub":"ЗВУК — усилители","qty":1},{"id":"eq-014","name":"Yamaha PX5","cat":"sound","sub":"ЗВУК — усилители","qty":1},{"id":"eq-015","name":"Lab Gruppen FP14000","cat":"sound","sub":"ЗВУК — усилители","qty":2},{"id":"eq-016","name":"Yamaha DM7","cat":"sound","sub":"ЗВУК — пульты","qty":1},{"id":"eq-017","name":"Yamaha Rio3224-D2","cat":"sound","sub":"ЗВУК — пульты","qty":2},{"id":"eq-018","name":"Yamaha DM3","cat":"sound","sub":"ЗВУК — пульты","qty":1},{"id":"eq-019","name":"Yamaha MG10XU","cat":"sound","sub":"ЗВУК — пульты","qty":2},{"id":"eq-020","name":"Yamaha Tio1608-D2","cat":"sound","sub":"ЗВУК — пульты","qty":1},{"id":"eq-021","name":"Shure Beta 91A","cat":"sound","sub":"ЗВУК — микрофоны","qty":1},{"id":"eq-022","name":"Sennheiser e604","cat":"sound","sub":"ЗВУК — микрофоны","qty":5},{"id":"eq-023","name":"Sennheiser e906","cat":"sound","sub":"ЗВУК — микрофоны","qty":1},{"id":"eq-024","name":"DPA 4488","cat":"sound","sub":"ЗВУК — микрофоны","qty":4},{"id":"eq-025","name":"Shure SM58","cat":"sound","sub":"ЗВУК — микрофоны","qty":4},{"id":"eq-026","name":"Shure SM57","cat":"sound","sub":"ЗВУК — микрофоны","qty":6},{"id":"eq-027","name":"Shure Beta 58A","cat":"sound","sub":"ЗВУК — микрофоны","qty":7},{"id":"eq-028","name":"Neumann TLM 102","cat":"sound","sub":"ЗВУК — микрофоны","qty":1},{"id":"eq-029","name":"Набор микрофонов для барабанов","cat":"sound","sub":"ЗВУК — микрофоны","qty":2},{"id":"eq-030","name":"Микрофонная стойка K&M","cat":"sound","sub":"ЗВУК — микрофоны","qty":19},{"id":"eq-031","name":"Shure AD4Q","cat":"sound","sub":"ЗВУК — радиосистемы","qty":1},{"id":"eq-032","name":"Shure AD2/B58","cat":"sound","sub":"ЗВУК — радиосистемы","qty":4},{"id":"eq-033","name":"Shure SLXD24DA/B58","cat":"sound","sub":"ЗВУК — радиосистемы","qty":2},{"id":"eq-034","name":"Shure UA845UWB","cat":"sound","sub":"ЗВУК — радиосистемы","qty":2},{"id":"eq-035","name":"Shure UA874","cat":"sound","sub":"ЗВУК — радиосистемы","qty":4},{"id":"eq-036","name":"Shure Axient","cat":"sound","sub":"ЗВУК — радиосистемы","qty":4},{"id":"eq-037","name":"Shure SLXD4D","cat":"sound","sub":"ЗВУК — радиосистемы","qty":7},{"id":"eq-038","name":"Shure PSM300","cat":"sound","sub":"ЗВУК — радиосистемы","qty":2},{"id":"eq-039","name":"CKC TOURIST M9","cat":"light","sub":"СВЕТ — приборы","qty":32},{"id":"eq-040","name":"JEG Follow Spot","cat":"light","sub":"СВЕТ — приборы","qty":4},{"id":"eq-041","name":"CKC BEAM VH5B","cat":"light","sub":"СВЕТ — приборы","qty":50},{"id":"eq-042","name":"CKC WASH ZB19X","cat":"light","sub":"СВЕТ — приборы","qty":50},{"id":"eq-043","name":"CKC STROBE AK M BLAST","cat":"light","sub":"СВЕТ — приборы","qty":34},{"id":"eq-044","name":"LED BAR TILT ZOOM","cat":"light","sub":"СВЕТ — приборы","qty":50},{"id":"eq-045","name":"CKC BLINDER DTW2","cat":"light","sub":"СВЕТ — приборы","qty":25},{"id":"eq-046","name":"Red Laser Bar","cat":"light","sub":"СВЕТ — приборы","qty":6},{"id":"eq-047","name":"CKC Wall Washer W700","cat":"light","sub":"СВЕТ — приборы","qty":24},{"id":"eq-048","name":"CKC Wall Washer W350","cat":"light","sub":"СВЕТ — приборы","qty":16},{"id":"eq-049","name":"CKC LPAR 18","cat":"light","sub":"СВЕТ — приборы","qty":50},{"id":"eq-050","name":"Pro H1L","cat":"light","sub":"СВЕТ — приборы","qty":12},{"id":"eq-051","name":"G-Ray Wall Washer","cat":"light","sub":"СВЕТ — приборы","qty":8},{"id":"eq-052","name":"G-Ray Wall Washer 700","cat":"light","sub":"СВЕТ — приборы","qty":11},{"id":"eq-053","name":"grandMA2","cat":"light","sub":"СВЕТ — управление","qty":2},{"id":"eq-054","name":"grandMA NPU","cat":"light","sub":"СВЕТ — управление","qty":3},{"id":"eq-055","name":"grandMA NPU (Chinese Version)","cat":"light","sub":"СВЕТ — управление","qty":3},{"id":"eq-056","name":"ArtNet-8","cat":"light","sub":"СВЕТ — управление","qty":6},{"id":"eq-057","name":"Outdoor 6DX Distributor","cat":"light","sub":"СВЕТ — управление","qty":8},{"id":"eq-058","name":"RDM Splitter 8","cat":"light","sub":"СВЕТ — управление","qty":8},{"id":"eq-059","name":"Avolites (световой пульт)","cat":"light","sub":"СВЕТ — управление","qty":1},{"id":"eq-060","name":"grandMA2 Wing (крыло)","cat":"light","sub":"СВЕТ — управление","qty":2},{"id":"eq-061","name":"TV 55”/65\"/75”","cat":"video","sub":"ВИДЕО — экраны","qty":13},{"id":"eq-062","name":"Gloshine LE 1000 x 500","cat":"video","sub":"ВИДЕО — экраны","qty":367},{"id":"eq-063","name":"Gloshine LE3.91 Mini 500 x 500","cat":"video","sub":"ВИДЕО — экраны","qty":32},{"id":"eq-064","name":"Gloshine MR Series 500 x 250","cat":"video","sub":"ВИДЕО — экраны","qty":49},{"id":"eq-065","name":"TV stand","cat":"video","sub":"ВИДЕО — экраны","qty":25},{"id":"eq-066","name":"TV Suffler Stand","cat":"video","sub":"ВИДЕО — экраны","qty":8},{"id":"eq-067","name":"Лазерный проектор 20 000 лм","cat":"video","sub":"ВИДЕО — экраны","qty":1},{"id":"eq-068","name":"Resolume Video Server","cat":"video","sub":"ВИДЕО — обработка","qty":2},{"id":"eq-069","name":"NovaStar MX40 PRO","cat":"video","sub":"ВИДЕО — обработка","qty":2},{"id":"eq-070","name":"Coolview CVDP1030","cat":"video","sub":"ВИДЕО — обработка","qty":2},{"id":"eq-071","name":"ATEM Television Studio Pro 4K","cat":"video","sub":"ВИДЕО — обработка","qty":1},{"id":"eq-072","name":"NovaStar VX1000","cat":"video","sub":"ВИДЕО — обработка","qty":7},{"id":"eq-073","name":"NovaStar CVT10","cat":"video","sub":"ВИДЕО — обработка","qty":8},{"id":"eq-074","name":"NovaStar H2 (видеопроцессор)","cat":"video","sub":"ВИДЕО — обработка","qty":1},{"id":"eq-075","name":"Blackmagic ATEM Mini Pro","cat":"video","sub":"ВИДЕО — обработка","qty":1},{"id":"eq-076","name":"Feelworld Live Pro L1","cat":"video","sub":"ВИДЕО — обработка","qty":1},{"id":"eq-077","name":"Sony FS7 Mark II","cat":"cam","sub":"ВИДЕОСЪЕМКА","qty":1},{"id":"eq-078","name":"Sony FS5","cat":"cam","sub":"ВИДЕОСЪЕМКА","qty":2},{"id":"eq-079","name":"Sony FX30","cat":"cam","sub":"ВИДЕОСЪЕМКА","qty":1},{"id":"eq-080","name":"Blackmagic URSA Mini 4.6K","cat":"cam","sub":"ВИДЕОСЪЕМКА","qty":2},{"id":"eq-081","name":"Blackmagic Pocket Cinema Camera 6K","cat":"cam","sub":"ВИДЕОСЪЕМКА","qty":2},{"id":"eq-082","name":"Blackmagic Pocket Cinema Camera 4K","cat":"cam","sub":"ВИДЕОСЪЕМКА","qty":2},{"id":"eq-083","name":"Amaran 150c","cat":"cam","sub":"ВИДЕОСЪЕМКА","qty":1},{"id":"eq-084","name":"Amaran 300c","cat":"cam","sub":"ВИДЕОСЪЕМКА","qty":1},{"id":"eq-085","name":"Nanlite Forza 200","cat":"cam","sub":"ВИДЕОСЪЕМКА","qty":1},{"id":"eq-086","name":"Nanlite Forza 60","cat":"cam","sub":"ВИДЕОСЪЕМКА","qty":1},{"id":"eq-087","name":"Nanlite Compac 200","cat":"cam","sub":"ВИДЕОСЪЕМКА","qty":1},{"id":"eq-088","name":"Nanlite PavoTube","cat":"cam","sub":"ВИДЕОСЪЕМКА","qty":1},{"id":"eq-089","name":"Allen & Heath","cat":"dj","sub":"DJ-оборудование","qty":1},{"id":"eq-090","name":"Pioneer DJM-A9","cat":"dj","sub":"DJ-оборудование","qty":1},{"id":"eq-091","name":"Pioneer The CDJ-3000","cat":"dj","sub":"DJ-оборудование","qty":4},{"id":"eq-092","name":"Akai APC40 MK2","cat":"dj","sub":"DJ-оборудование","qty":1},{"id":"eq-093","name":"Akai APC40 MK1","cat":"dj","sub":"DJ-оборудование","qty":1},{"id":"eq-094","name":"UGY 300 KS","cat":"sfx","sub":"СПЕЦЭФФЕКТЫ","qty":4},{"id":"eq-095","name":"Mirror ball 100 x 100","cat":"sfx","sub":"СПЕЦЭФФЕКТЫ","qty":1},{"id":"eq-096","name":"DJ Power H-4000S","cat":"sfx","sub":"СПЕЦЭФФЕКТЫ","qty":2},{"id":"eq-097","name":"Sparkular","cat":"sfx","sub":"СПЕЦЭФФЕКТЫ","qty":8},{"id":"eq-098","name":"CO₂ Jet","cat":"sfx","sub":"СПЕЦЭФФЕКТЫ","qty":6},{"id":"eq-099","name":"DJ Power DHZ-670","cat":"sfx","sub":"СПЕЦЭФФЕКТЫ","qty":6},{"id":"eq-100","name":"DJ Power H-9","cat":"sfx","sub":"СПЕЦЭФФЕКТЫ","qty":8},{"id":"eq-101","name":"DJ Power H-3000","cat":"sfx","sub":"СПЕЦЭФФЕКТЫ","qty":8},{"id":"eq-102","name":"Haze machine DFZ-800","cat":"sfx","sub":"СПЕЦЭФФЕКТЫ","qty":2},{"id":"eq-103","name":"Fog machine FOG-1000","cat":"sfx","sub":"СПЕЦЭФФЕКТЫ","qty":4},{"id":"eq-104","name":"Low fog machine","cat":"sfx","sub":"СПЕЦЭФФЕКТЫ","qty":1},{"id":"eq-105","name":"DMX fan","cat":"sfx","sub":"СПЕЦЭФФЕКТЫ","qty":10},{"id":"eq-106","name":"Баллон CO₂","cat":"sfx","sub":"СПЕЦЭФФЕКТЫ","qty":19},{"id":"eq-107","name":"Fender Standard Stratocaster SSS","cat":"dj","sub":"БЭКЛАЙН","qty":1},{"id":"eq-108","name":"Fender Jazz Bass","cat":"dj","sub":"БЭКЛАЙН","qty":1},{"id":"eq-109","name":"PDP Concept Maple","cat":"dj","sub":"БЭКЛАЙН","qty":1},{"id":"eq-110","name":"Marshall DSL40","cat":"dj","sub":"БЭКЛАЙН","qty":1},{"id":"eq-111","name":"Fender CD-60SCE","cat":"dj","sub":"БЭКЛАЙН","qty":1},{"id":"eq-112","name":"Fender Champion 100","cat":"dj","sub":"БЭКЛАЙН","qty":1},{"id":"eq-113","name":"Laney RB4","cat":"dj","sub":"БЭКЛАЙН","qty":1},{"id":"eq-114","name":"Yamaha G310","cat":"dj","sub":"БЭКЛАЙН","qty":1},{"id":"eq-115","name":"Hollyland se 5s","cat":"comm","sub":"СВЯЗЬ","qty":3},{"id":"eq-116","name":"Icom Walkie Talkie","cat":"comm","sub":"СВЯЗЬ","qty":30},{"id":"eq-117","name":"TrueCON","cat":"power","sub":"КОММУТАЦИЯ","qty":0},{"id":"eq-118","name":"PowerCON","cat":"power","sub":"КОММУТАЦИЯ","qty":0},{"id":"eq-119","name":"XLR Cable","cat":"power","sub":"КОММУТАЦИЯ","qty":0},{"id":"eq-120","name":"Power Distributions 16/32/63/125/400","cat":"power","sub":"ЭЛЕКТРИКА","qty":100},{"id":"eq-121","name":"Westin Power TC275T 200 кВт (генератор)","cat":"power","sub":"ЭЛЕКТРИКА","qty":1},{"id":"eq-122","name":"Бак для топлива 800 л","cat":"power","sub":"ЭЛЕКТРИКА","qty":4},{"id":"eq-123","name":"Stage structure 2000 x 2000","cat":"stage","sub":"КОНСТРУКЦИИ","qty":1},{"id":"eq-124","name":"Stage Deck 2000 x 1000","cat":"stage","sub":"КОНСТРУКЦИИ","qty":500},{"id":"eq-125","name":"Box corner","cat":"stage","sub":"КОНСТРУКЦИИ","qty":4},{"id":"eq-126","name":"Mojo barrier","cat":"stage","sub":"КОНСТРУКЦИИ","qty":80},{"id":"eq-127","name":"Chain hoist 0,32T/1T/2T","cat":"rig","sub":"КОНСТРУКЦИИ","qty":11},{"id":"eq-128","name":"Truss 40 pillar","cat":"rig","sub":"КОНСТРУКЦИИ","qty":0},{"id":"eq-129","name":"Truss 40","cat":"rig","sub":"КОНСТРУКЦИИ","qty":63},{"id":"eq-130","name":"Truss 30","cat":"rig","sub":"КОНСТРУКЦИИ","qty":34},{"id":"eq-131","name":"Fan barrier","cat":"stage","sub":"КОНСТРУКЦИИ","qty":100},{"id":"eq-132","name":"Base collar","cat":"stage","sub":"КОНСТРУКЦИИ","qty":600},{"id":"eq-133","name":"TPU 5-Channel Cable Protector","cat":"stage","sub":"КОНСТРУКЦИИ","qty":100},{"id":"eq-134","name":"Рама подвеса линейного массива (J/V-Frame)","cat":"rig","sub":"КОНСТРУКЦИИ","qty":6},{"id":"eq-135","name":"Рама подвеса LED-экрана","cat":"rig","sub":"КОНСТРУКЦИИ","qty":15},{"id":"eq-136","name":"Пульт управления лебедками","cat":"rig","sub":"КОНСТРУКЦИИ","qty":2},{"id":"eq-137","name":"Ферма квадратного сечения","cat":"rig","sub":"КОНСТРУКЦИИ","qty":35}];
+
+var CATS = {
+  rig:   {name:"Риггинг и фермы", color:"var(--c-rig)", prio:1},
+  stage: {name:"Сцена и конструкции", color:"var(--c-stage)", prio:2},
+  power: {name:"Электрика и коммутация", color:"var(--c-power)", prio:3},
+  light: {name:"Свет", color:"var(--c-light)", prio:4},
+  video: {name:"Видео и LED", color:"var(--c-video)", prio:5},
+  sound: {name:"Звук", color:"var(--c-sound)", prio:6},
+  sfx:   {name:"Спецэффекты", color:"var(--c-sfx)", prio:7},
+  dj:    {name:"DJ и бэклайн", color:"var(--c-dj)", prio:8},
+  cam:   {name:"Видеосъёмка", color:"var(--c-cam)", prio:9},
+  comm:  {name:"Связь", color:"var(--c-other)", prio:10},
+  other: {name:"Прочее", color:"var(--c-other)", prio:11}
+};
+
+/* How each kind of equipment is drawn and cabled. w/d: footprint in metres; watts: per unit;
+   sig: signal cable it receives; line: drawn as a segment with a length. */
+var KINDS = {
+  truss:   {name:"Ферма", line:true, len:8, z:7},
+  barrier: {name:"Барьер", line:true, len:8},
+  protector:{name:"Кабельный мост", line:true, len:3},
+  led:     {name:"LED-экран", line:true, len:6, h:3.5, z:1.5},
+  tv:      {name:"ТВ", w:1.5, d:.3, watts:250, sig:"sdi"},
+  proj:    {name:"Проектор", w:.8, d:.7, watts:2000, sig:"sdi"},
+  spk:     {name:"Акустика", w:.75, d:.5, sig:"spk", hang:true},
+  sub:     {name:"Сабвуфер", w:1.3, d:.8, sig:"spk"},
+  aspk:    {name:"Активная акустика", w:.5, d:.45, watts:500, sig:"xlr"},
+  amp:     {name:"Усилитель", w:.6, d:.55, watts:2000, src:"spk"},
+  console: {name:"Звуковой пульт", w:1.2, d:.8, watts:300},
+  stagebox:{name:"Стейдж-бокс", w:.6, d:.55, watts:200, src:"xlr"},
+  mic:     {name:"Микрофон", r:.18, sig:"xlr"},
+  stand:   {name:"Стойка", r:.15},
+  radio:   {name:"Радиосистема", w:.5, d:.45, watts:100, sig:"xlr"},
+  light:   {name:"Прибор", r:.24, watts:400, sig:"dmx", chain:true, hang:true},
+  lightdesk:{name:"Световой пульт", w:1.3, d:.8, watts:300, src:"dmx"},
+  node:    {name:"DMX/Art-Net", w:.5, d:.45, watts:50, src:"dmx"},
+  vproc:   {name:"Видеообработка", w:.6, d:.5, watts:300},
+  cam:     {name:"Камера", r:.3, watts:60, sig:"sdi"},
+  camlight:{name:"Свет для съёмки", r:.3, watts:200},
+  dj:      {name:"DJ", w:.6, d:.5, watts:100, sig:"xlr"},
+  backline:{name:"Бэклайн", w:.7, d:.5, watts:200, sig:"xlr"},
+  sfx:     {name:"Эффект", r:.3, watts:1000, sig:"dmx", chain:true},
+  distro:  {name:"Дистрибьютор", w:.6, d:.5, src:"power"},
+  gen:     {name:"Генератор", w:4, d:1.5},
+  hoist:   {name:"Лебёдка", r:.25},
+  frame:   {name:"Рама подвеса", w:1.2, d:.5},
+  comm:    {name:"Связь", r:.2},
+  rigacc:  {name:"Риггинг", r:.25},
+  tower:   {name:"Опора (граунд)", w:.45, d:.45},
+  deck:    {name:"Сценический подиум", w:2, d:1},
+  cable:   {name:"Кабель", r:.2},
+  other:   {name:"Прочее", w:.6, d:.5}
+};
+
+/* Cable families: standard lengths we pick pieces from. */
+var CABLES = {
+  feed:  {name:"Силовой фидер CEE 32/63 А", std:[10,25,50], color:"#C0392B"},
+  power: {name:"Питание 16 А (PowerCON TRUE1 / Schuko)", std:[3,5,10,15,20,30], color:"#E67E22"},
+  dmx:   {name:"DMX 5-pin", std:[1.5,3,5,10,15,20,30,50], color:"#C9A100"},
+  spk:   {name:"Акустический NL4/NL8", std:[5,10,15,20,30,50], color:"#1F9E7A"},
+  xlr:   {name:"Микрофонный XLR", std:[3,5,10,15,20], color:"#3E7CC9"},
+  net:   {name:"EtherCON Cat6 (Dante, Art-Net, LED)", std:[10,20,30,50,75,100], color:"#8E44AD"},
+  sdi:   {name:"Видео SDI", std:[10,25,50,100], color:"#16A3B8"}
+};
+var CABLE_ORDER = ["feed","power","dmx","spk","xlr","net","sdi"];
+
+function kindOf(it){
+  var n=it.name, s=it.sub||"";
+  if(/КОММУТАЦИЯ/i.test(s)) return "cable";
+  if(/Stage Deck|Stage structure/.test(n)) return "deck";
+  if(/Truss 40 pillar/.test(n)) return "tower";
+  if(/Truss|Ферма/.test(n)) return "truss";
+  if(/Chain hoist/.test(n)) return "hoist";
+  if(/J\/V-Frame|Рама подвеса/.test(n)) return "frame";
+  if(/Mojo|Fan barrier/.test(n)) return "barrier";
+  if(/Cable Protector/.test(n)) return "protector";
+  if(/Base collar|Box corner|лебедками/.test(n)) return "rigacc";
+  if(/генератор/.test(n)) return "gen";
+  if(/Power Distributions/.test(n)) return "distro";
+  if(/Gloshine/.test(n)) return "led";
+  if(/^TV \d/.test(n)) return "tv";
+  if(/проектор/.test(n)) return "proj";
+  if(/SUB|INFRA|KS28/.test(n)) return "sub";
+  if(/CHR15|B205D/.test(n)) return "aspk";
+  if(/J8|V8|\bM4\b/.test(n)) return "spk";
+  if(/усилители/i.test(s)) return "amp";
+  if(/Rio|Tio/.test(n)) return "stagebox";
+  if(/пульты/i.test(s)) return "console";
+  if(/стойка/i.test(n)) return "stand";
+  if(/микрофоны/i.test(s)) return "mic";
+  if(/радиосистемы/i.test(s)) return "radio";
+  if(/Follow Spot/.test(n)) return "light";
+  if(/СВЕТ — приборы/i.test(s)) return "light";
+  if(/ArtNet|Distributor|Splitter|NPU/.test(n)) return "node";
+  if(/СВЕТ — управление/i.test(s)) return "lightdesk";
+  if(/ВИДЕО — обработка/i.test(s)) return "vproc";
+  if(/ВИДЕОСЪЕМКА/i.test(s)) return /Sony|Blackmagic/.test(n)?"cam":"camlight";
+  if(/^DJ/.test(s)) return "dj";
+  if(/БЭКЛАЙН/i.test(s)) return "backline";
+  if(/Баллон|Бак|stand|Stand/.test(n)) return "other";
+  if(/СПЕЦЭФФЕКТЫ/i.test(s)) return /Mirror/.test(n)?"other":"sfx";
+  if(/СВЯЗЬ/i.test(s)) return "comm";
+  return "other";
+}
+var WATTS=[[/TOURIST/,650],[/Follow Spot/,1200],[/BEAM/,350],[/WASH/,500],[/STROBE/,1000],[/LED BAR/,250],[/BLINDER/,400],[/Laser/,100],[/W700|Washer 700/,700],[/W350|G-Ray Wall Washer$/,350],[/LPAR/,180],[/H1L/,400],
+  [/UGY/,300],[/H-4000S/,1500],[/H-3000/,1500],[/DHZ/,700],[/H-9/,1000],[/DFZ/,800],[/FOG-1000/,1000],[/Low fog/,1500],[/Sparkular/,700],[/CO₂ Jet/,50],[/DMX fan/,300]];
+function wattsOf(it,k){ for(var i=0;i<WATTS.length;i++) if(WATTS[i][0].test(it.name)) return WATTS[i][1]; return KINDS[k].watts||0 }
+function ledPanel(it){ var m=/(\d+)\s*x\s*(\d+)/.exec(it.name); var w=m?+m[1]/1000:1, h=m?+m[2]/1000:.5; return {w:w,h:h,watts:Math.round(300*w*h)} }
+function lineUnit(it,k){ if(k==="truss") return 3; if(k==="barrier") return /Fan/.test(it.name)?2:1; if(k==="protector") return .9; return 1 }
+
+var ITEMS={}; CATALOG.forEach(function(it){ it.kind=kindOf(it); it.watts=wattsOf(it,it.kind); ITEMS[it.id]=it });
+function findItem(rx){ for(var i=0;i<CATALOG.length;i++) if(rx.test(CATALOG[i].name)) return CATALOG[i].id }
+var ID = {deck:findItem(/Stage Deck/), hoist:findItem(/Chain hoist/), frame:findItem(/J\/V-Frame/), prot:findItem(/Cable Protector/),
+  powercon:findItem(/^PowerCON/), truecon:findItem(/^TrueCON/), xlr:findItem(/^XLR Cable/), distro:findItem(/Power Distributions/), corner:findItem(/Box corner/), pillar:findItem(/Truss 40 pillar/)};
+
+/* ---------- helpers ---------- */
+function $(s,r){return (r||document).querySelector(s)}
+function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function n(v){v=parseFloat(String(v).replace(",","."));return isFinite(v)?v:0}
+function num(v,d){return new Intl.NumberFormat("ru-RU",{maximumFractionDigits:d==null?1:d}).format(v)}
+function uid(){return "o"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function clone(o){return JSON.parse(JSON.stringify(o))}
+function r2(v){return Math.round(v*100)/100}
+function snap(v){return $("#snap").checked?Math.round(v*4)/4:r2(v)}
+function rad(d){return d*Math.PI/180}
+function ends(o){ var a=rad(o.rot||0), hx=Math.cos(a)*o.len/2, hy=Math.sin(a)*o.len/2; return [{x:o.x-hx,y:o.y-hy},{x:o.x+hx,y:o.y+hy}] }
+function distSeg(p,o){ var e=ends(o), ax=e[0].x, ay=e[0].y, bx=e[1].x, by=e[1].y, dx=bx-ax, dy=by-ay, L=dx*dx+dy*dy, t=L?Math.max(0,Math.min(1,((p.x-ax)*dx+(p.y-ay)*dy)/L)):0; return Math.hypot(p.x-ax-t*dx,p.y-ay-t*dy) }
+function inRect(p,r){return p.x>=r.x-1e-6&&p.x<=r.x+r.w+1e-6&&p.y>=r.y-1e-6&&p.y<=r.y+r.d+1e-6}
+function kOf(o){return KINDS[ITEMS[o.item]?ITEMS[o.item].kind:"other"]||KINDS.other}
+function kindKey(o){return ITEMS[o.item]?ITEMS[o.item].kind:"other"}
+
+/* ---------- state ---------- */
+var LS="lotus-constructor-v1";
+var S, UNDO=[], view=null, sel=null, tab="eq", mode="plan";
+var show={feed:true,power:true,dmx:true,spk:true,xlr:true,net:true,sdi:true};
+function blank(){ return {name:"Новый сетап", venue:{w:30,d:24}, stage:{x:9,y:2,w:12,d:8,h:1.2}, foh:{x:13,y:18,w:4,d:3}, inlet:{x:2,y:1}, slack:10, objs:[], layers:{}, truss:{sec:"3; 2; 1; 0,5", cones:4, pins:8, clips:8}} }
+function norm(s){ s.layers=s.layers||{}; s.truss=s.truss||{sec:"3; 2; 1; 0,5", cones:4, pins:8, clips:8}; return s }
+
+function O(item,x,y,extra){ var it=ITEMS[item], k=KINDS[it.kind]||KINDS.other, o={id:uid(),item:item,x:x,y:y,rot:0,qty:1,on:"auto"};
+  if(k.line){o.len=k.len||4} if(it.kind==="truss") o.z=k.z; if(it.kind==="led"){o.h=k.h;o.z=k.z;o.on="air"}
+  if(extra) for(var key in extra) o[key]=extra[key]; return o }
+function I(rx){return findItem(rx)}
+function preset(kind){
+  var s=blank();
+  if(kind==="empty"){ s.objs=[]; return s }
+  if(kind==="club"){
+    s.name="Клубный сетап"; s.venue={w:20,d:16}; s.stage={x:6,y:1,w:8,d:5,h:.8}; s.foh={x:8.5,y:12,w:3,d:2.5}; s.inlet={x:1,y:1};
+    var t1=O(I(/^Truss 30/),10,2.2,{len:8}), t2=O(I(/^Truss 30/),10,5.4,{len:8,z:5});
+    s.objs=[t1,t2,
+      O(I(/CHR15/),5.2,6.3,{rot:-10}),O(I(/CHR15/),14.8,6.3,{rot:10}),
+      O(I(/V-SUB/),5.2,5.4,{qty:2}),O(I(/V-SUB/),14.8,5.4,{qty:2}),
+      O(I(/Pioneer DJM/),10,3.6),O(I(/CDJ-3000/),9.1,3.6,{qty:2}),O(I(/CDJ-3000/),10.9,3.6,{qty:2}),
+      O(I(/Yamaha DM3/),9.4,13.2),O(I(/D&B Audiotechnik D12/),5.2,3.4,{qty:2,on:"floor"}),O(I(/Tio1608/),11.6,3.6),O(I(/RDM Splitter/),6.6,1.5),O(I(/^Power Distributions/),13.6,1.5),O(I(/^Power Distributions/),2,2),
+      O(I(/DJ Power H-9/),7,5.6),O(I(/DJ Power H-9/),13,5.6),O(I(/Mirror ball/),10,9,{on:"air",z:4})];
+    [7,8.5,10,11.5,13].forEach(function(x){ s.objs.push(O(I(/BEAM VH5B/),x,2.2)); s.objs.push(O(I(/WASH ZB19X/),x,5.4)) });
+    [6.5,13.5].forEach(function(x){s.objs.push(O(I(/STROBE/),x,5.4))});
+    s.objs.push(O(I(/grandMA2 Wing/),10.6,13.2));
+    return s;
+  }
+  if(kind==="conf"){
+    s.name="Конференция"; s.venue={w:24,d:30}; s.stage={x:7,y:1,w:10,d:4,h:.6}; s.foh={x:10,y:24,w:4,d:3}; s.inlet={x:1,y:1};
+    s.objs=[O(I(/Gloshine LE 1000/),12,1.5,{len:8,h:4.5,z:.6}),
+      O(I(/^Truss 40$/),12,4.5,{len:12,z:6}),
+      O(I(/TV 55/),8.2,4.6,{rot:-20}),O(I(/TV 55/),15.8,4.6,{rot:20}),
+      O(I(/CHR15/),6.2,5.4,{rot:-8,on:"floor"}),O(I(/CHR15/),17.8,5.4,{rot:8,on:"floor"}),O(I(/B205D/),6.2,15,{rot:-8,on:"floor"}),O(I(/B205D/),17.8,15,{rot:8,on:"floor"}),
+      O(I(/Shure SLXD24DA/),12,24.6),O(I(/Shure Beta 58A/),14.5,3,{qty:1}),O(I(/Микрофонная стойка/),14.5,3),
+      O(I(/Yamaha DM3/),11,25.5),O(I(/NovaStar VX1000/),12.5,25.5),O(I(/ATEM Mini Pro/),13.5,25.5),O(I(/Sony FX30/),12,22,{on:"floor"}),
+      O(I(/^Power Distributions/),18.5,2),O(I(/^Power Distributions/),12,20.5),O(I(/ArtNet-8/),5.5,2)];
+    [7,9.5,12,14.5,17].forEach(function(x){ s.objs.push(O(I(/LED BAR TILT/),x,4.5)) });
+    s.objs.push(O(I(/grandMA2$/),12,26.5,{on:"floor"}));
+    return s;
+  }
+  // concert
+  s.name="Концерт, сцена 12×8";
+  var tb=O(I(/^Truss 40$/),15,2.6,{len:14,z:8}), tm=O(I(/^Truss 40$/),15,6,{len:14,z:8}), tf=O(I(/^Truss 40$/),15,9.2,{len:14,z:7.5});
+  s.objs=[tb,tm,tf,
+    O(I(/Gloshine LE 1000/),15,2.1,{len:10,h:5,z:2}),
+    O(I(/J8\/J12/),7.4,9.6,{qty:8,on:"air",z:9,rot:-8}),O(I(/J8\/J12/),22.6,9.6,{qty:8,on:"air",z:9,rot:8}),
+    O(I(/J-SUB/),10.5,10.6,{qty:3,on:"floor"}),O(I(/J-SUB/),19.5,10.6,{qty:3,on:"floor"}),
+    O(I(/\bM4\b/),12,9.4,{qty:1}),O(I(/\bM4\b/),15,9.4,{qty:2}),O(I(/\bM4\b/),18,9.4,{qty:1}),
+    O(I(/D80/),6.6,4.5,{qty:4,on:"floor"}),O(I(/D80/),23.4,4.5,{qty:4,on:"floor"}),
+    O(I(/Rio3224/),20.2,3.5),O(I(/Yamaha DM7/),14,19.2),O(I(/grandMA2$/),16,19.2),O(I(/NovaStar MX40/),16,20.3),O(I(/Resolume/),14,20.3),
+    O(I(/RDM Splitter/),8.2,2.6),O(I(/ArtNet-8/),21.8,2.6),
+    O(I(/^Power Distributions/),7,1.4),O(I(/^Power Distributions/),23,1.4),O(I(/^Power Distributions/),15,16.6),
+    O(I(/Shure SM58/),13,7.6,{qty:1}),O(I(/Shure SM58/),17,7.6,{qty:1}),O(I(/Shure Beta 91A/),15,4.5),O(I(/Набор микрофонов/),15,4.5),
+    O(I(/PDP Concept/),15,4.5),O(I(/Marshall/),12,5.5),O(I(/Laney/),18,5.5),
+    O(I(/Sparkular/),10.5,9.4),O(I(/Sparkular/),19.5,9.4),O(I(/Haze machine/),9.6,3),
+    O(I(/Mojo barrier/),15,12,{len:16})];
+  [9.5,11.5,13.5,16.5,18.5,20.5].forEach(function(x){ s.objs.push(O(I(/TOURIST M9/),x,2.6)) });
+  [9,11,13,15,17,19,21].forEach(function(x){ s.objs.push(O(I(/BEAM VH5B/),x,6)) });
+  [9,11,13,15,17,19,21].forEach(function(x){ s.objs.push(O(I(/WASH ZB19X/),x,9.2)) });
+  [10,15,20].forEach(function(x){ s.objs.push(O(I(/BLINDER/),x,9.2)) });
+  [9.5,20.5].forEach(function(x){ s.objs.push(O(I(/JEG Follow Spot/),x,19.5,{on:"floor"})) });
+  return s;
+}
+function load(){ try{ var t=localStorage.getItem(LS); if(t){ var s=JSON.parse(t); if(s&&s.venue&&s.objs) return norm(s) } }catch(e){} return preset("concert") }
+function save(){ try{ localStorage.setItem(LS,JSON.stringify(S)) }catch(e){} }
+function push(){ UNDO.push(JSON.stringify(S)); if(UNDO.length>60) UNDO.shift() }
+function undo(){ if(!UNDO.length) return; S=JSON.parse(UNDO.pop()); if(sel&&!S.objs.some(function(o){return o.id===sel})) sel=null; all() }
+function obj(id){ for(var i=0;i<S.objs.length;i++) if(S.objs[i].id===id) return S.objs[i] }
+
+/* ---------- placement: resolve height ---------- */
+function trusses(){ return S.objs.filter(function(o){return kindKey(o)==="truss"}) }
+function hostTruss(o){ if(kindKey(o)==="truss"||kindKey(o)==="led") return null; var best=null, bd=.6;
+  trusses().forEach(function(t){ var d=distSeg(o,t); if(d<bd){bd=d;best=t} }); return best }
+function placeOf(o){ // where the object actually sits: truss / air / stage / floor
+  var k=kindKey(o);
+  if(k==="truss") return {on:"truss-self", z:n(o.z)};
+  if(o.on==="air") return {on:"air", z:n(o.z)};
+  if(o.on==="floor") return {on:"floor", z:0};
+  if(o.on==="stage") return {on:"stage", z:S.stage.h};
+  var t=hostTruss(o); if(t && (KINDS[k].hang||k==="sfx"||k==="hoist"||k==="other")) return {on:"truss", z:n(t.z), truss:t.id};
+  if(inRect(o,S.stage)) return {on:"stage", z:S.stage.h};
+  return {on:"floor", z:0};
+}
+function inFOH(o){ return inRect(o,S.foh) }
+
+/* ---------- truss structures ---------- */
+// Trusses are spans between nodes. Ends closer than 6 cm (same height ±30 cm) share a node.
+// A node where 2+ ways meet (spans, or a ground-support tower below) gets a corner block; two collinear spans meet with a plain joint.
+// Each span is laid out from the available section lengths; every joint between sections or into a block takes one connector set.
+function trussW(it){ return /30|квадрат/i.test(it.name)?.3:.4 }
+function secList(){ var v=String(S.truss.sec).split(/[;\s]+/).map(n).filter(function(x){return x>=.25}); return v.length?v:[3,2,1,.5] }
+function decompose(L,secs){
+  var U=secs.map(function(s){return Math.round(s*100)}).sort(function(a,b){return b-a}), T=Math.round(L*100);
+  if(T<=2) return {pcs:[],over:0};
+  var max=T+U[0], best=new Array(max+1), from=new Array(max+1); best[0]=0;
+  for(var v=1;v<=max;v++){ best[v]=Infinity; for(var i=0;i<U.length;i++){ var u=U[i]; if(v>=u&&best[v-u]+1<best[v]){best[v]=best[v-u]+1;from[v]=u} } }
+  var pick=-1; for(v=Math.max(1,T-2);v<=max;v++) if(best[v]<Infinity){ pick=v; break }
+  var pcs=[]; for(v=pick;v>0;v-=from[v]) pcs.push(from[v]/100);
+  pcs.sort(function(a,b){return b-a}); return {pcs:pcs, over:Math.max(0,(pick-T)/100)};
+}
+function trussNodes(){
+  var nodes=[];
+  trusses().forEach(function(t){ var e=ends(t); [0,1].forEach(function(i){
+    var p=e[i], nd=null; for(var j=0;j<nodes.length;j++){ var q=nodes[j]; if(Math.hypot(q.x-p.x,q.y-p.y)<.06&&Math.abs(q.z-n(t.z))<.3){nd=q;break} }
+    if(!nd){ nd={x:p.x,y:p.y,z:n(t.z),ends:[]}; nodes.push(nd) } nd.ends.push({t:t,i:i}) }) });
+  return nodes;
+}
+function trussSystem(){
+  var nodes=trussNodes(), spans={}, comps=[], warns=[], parts={sec:{}, blocks:{}, sets:0, plates:0, hoists:0, metres:0, towerM:0};
+  var towers=S.objs.filter(function(o){return kindKey(o)==="tower"});
+  var towerNode={}, hung={}, A={}, B={};
+  towers.forEach(function(tw){ var b=null, bd=.5; nodes.forEach(function(nd){ var d=Math.hypot(nd.x-tw.x,nd.y-tw.y); if(d<bd){bd=d;b=nd} }); if(b&&!b.tower){ b.tower=tw; towerNode[tw.id]=b } });
+  nodes.forEach(function(nd,ix){ nd.id=ix;
+    var dirs=nd.ends.map(function(en){ var e=ends(en.t), o=e[1-en.i]; var L=Math.hypot(o.x-nd.x,o.y-nd.y)||1; return {x:(o.x-nd.x)/L,y:(o.y-nd.y)/L} });
+    nd.ways=nd.ends.length+(nd.tower?1:0);
+    nd.straight=!nd.tower&&nd.ends.length===2&&(dirs[0].x*dirs[1].x+dirs[0].y*dirs[1].y)<-.995;
+    nd.block=nd.ways>=2&&!nd.straight;
+    nd.w=Math.max.apply(null,nd.ends.map(function(en){return trussW(ITEMS[en.t.item])}));
+  });
+  // connected structures
+  var parent=nodes.map(function(_,i){return i}); function f(i){ while(parent[i]!==i) i=parent[i]=parent[parent[i]]; return i }
+  nodes.forEach(function(nd){ nd.ends.forEach(function(en){ (en.i===0?A:B)[en.t.id]=nd }) });
+  trusses().forEach(function(t){ parent[f(A[t.id].id)]=f(B[t.id].id) });
+  var byRoot={};
+  nodes.forEach(function(nd){ var r=f(nd.id); (byRoot[r]=byRoot[r]||{nodes:[],spans:[],towers:[]}).nodes.push(nd); if(nd.tower) byRoot[r].towers.push(nd) });
+  trusses().forEach(function(t){
+    var it=ITEMS[t.item], w=trussW(it), na=A[t.id], nb=B[t.id], offA=na.block?na.w/2:0, offB=nb.block?nb.w/2:0, net=n(t.len)-offA-offB, d=decompose(net,secList());
+    var sets=Math.max(0,d.pcs.length-1)+(na.block?1:0)+(nb.block?1:0);
+    spans[t.id]={t:t,offA:offA,offB:offB,net:net,pcs:d.pcs,over:d.over,sets:sets,w:w};
+    byRoot[f(na.id)].spans.push(spans[t.id]);
+    if(d.over>.02) warns.push("Ферма "+num(t.len)+" м не собирается ровно из секций "+secList().map(function(x){return num(x)}).join("/")+" м: получится длиннее на "+num(d.over*100,0)+" см.");
+  });
+  var ci=0;
+  Object.keys(byRoot).forEach(function(r){ var c=byRoot[r]; if(!c.spans.length) return; ci++;
+    c.name="Конструкция "+ci; c.z=Math.max.apply(null,c.nodes.map(function(nd){return nd.z})); c.hung=!c.towers.length;
+    c.spans.forEach(function(sp){ hung[sp.t.id]=c.hung });
+    c.metres=0; c.sec={}; c.blocks={}; c.sets=0; c.item=c.spans[0].t.item;
+    c.spans.forEach(function(sp){ sp.pcs.forEach(function(x){c.metres+=x}); sp.pcs.forEach(function(x){ var k=ITEMS[sp.t.item].name+"|"+x; c.sec[k]=(c.sec[k]||0)+1 }); c.sets+=sp.sets });
+    c.nodes.forEach(function(nd){ if(nd.straight) c.sets++; if(nd.block){ var k=nd.ways+"-way"; c.blocks[k]=(c.blocks[k]||0)+1 } });
+    c.towerList=c.towers.map(function(nd){ var h=nd.z-(nd.block?nd.w/2:0), d=decompose(h,secList()); c.sets+=Math.max(0,d.pcs.length-1)+1+(nd.block?1:0); return {h:h,pcs:d.pcs} });
+    // hoists: every node except plain joints, plus one more per 8 m of span between them
+    c.hoists=c.hung?c.nodes.filter(function(nd){return !nd.straight}).length+c.spans.reduce(function(s,sp){return s+Math.max(0,Math.ceil(n(sp.t.len)/8-1e-9)-1)},0):0;
+    comps.push(c);
+    parts.metres+=c.metres; parts.sets+=c.sets; parts.hoists+=c.hoists; parts.plates+=c.towers.length;
+    Object.keys(c.sec).forEach(function(k){parts.sec[k]=(parts.sec[k]||0)+c.sec[k]});
+    Object.keys(c.blocks).forEach(function(k){parts.blocks[k]=(parts.blocks[k]||0)+c.blocks[k]});
+    c.towerList.forEach(function(tl){ tl.pcs.forEach(function(x){parts.towerM+=x}); tl.pcs.forEach(function(x){ var k="Опора|"+x; parts.sec[k]=(parts.sec[k]||0)+1 }) });
+  });
+  // free-standing towers (not under a truss)
+  towers.forEach(function(tw){ if(towerNode[tw.id]) return; var h=n(tw.z)||4, d=decompose(h,secList()); parts.plates++; d.pcs.forEach(function(x){parts.towerM+=x}); parts.sets+=Math.max(0,d.pcs.length-1)+1;
+    d.pcs.forEach(function(x){ var k="Опора|"+x; parts.sec[k]=(parts.sec[k]||0)+1 }) });
+  return {nodes:nodes, spans:spans, comps:comps, parts:parts, warns:warns, towerNode:towerNode, hung:hung};
+}
+function trussFrom(a,b,item,z){ var L=Math.hypot(b.x-a.x,b.y-a.y), ang=Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI; return O(item,r2((a.x+b.x)/2),r2((a.y+b.y)/2),{len:r2(L),rot:r2(ang),z:z}) }
+function splitTruss(t,p){ var e=ends(t), a=trussFrom(e[0],p,t.item,t.z), b=trussFrom(p,e[1],t.item,t.z); S.objs=S.objs.filter(function(o){return o!==t}); S.objs.push(a,b) }
+// Snap a point to a truss node, else onto a truss body (returns the truss to split), else to the grid.
+function snapTrussPt(p,skipId){
+  var best=null, bd=.4;
+  trusses().forEach(function(t){ if(t.id===skipId) return; ends(t).forEach(function(e){ var d=Math.hypot(e.x-p.x,e.y-p.y); if(d<bd){bd=d;best={x:r2(e.x),y:r2(e.y),node:true,z:n(t.z)}} }) });
+  if(best) return best;
+  var bt=null; bd=.3; trusses().forEach(function(t){ if(t.id===skipId) return; var d=distSeg(p,t); if(d<bd){bd=d;bt=t} });
+  if(bt){ var e=ends(bt), dx=e[1].x-e[0].x, dy=e[1].y-e[0].y, L=dx*dx+dy*dy, k=((p.x-e[0].x)*dx+(p.y-e[0].y)*dy)/L, len=Math.sqrt(L);
+    var s=Math.round(k*len*2)/2/len; if(s>.02&&s<.98) return {x:r2(e[0].x+s*dx),y:r2(e[0].y+s*dy),split:bt,z:n(bt.z)} }
+  return {x:snap(p.x),y:snap(p.y)};
+}
+function addStructure(kind){
+  var item=$("#drawItem").value, st=S.stage, W=n(tpl.w), D=n(tpl.d), H=n(tpl.h), cx=st.x+st.w/2, cy=st.y+st.d/2, bw=kind==="line"?0:trussW(ITEMS[item]), x0=r2(cx-(W+bw)/2), x1=r2(cx+(W+bw)/2), y0=r2(cy-(D+bw)/2), y1=r2(cy+(D+bw)/2), pillar=findItem(/Truss 40 pillar/);
+  push();
+  function sp(a,b){ S.objs.push(trussFrom(a,b,item,H)) }
+  function tw(x,y){ S.objs.push(O(pillar,x,y,{z:H})) }
+  if(kind==="rect"||kind==="ground"){ sp({x:x0,y:y0},{x:x1,y:y0}); sp({x:x1,y:y0},{x:x1,y:y1}); sp({x:x1,y:y1},{x:x0,y:y1}); sp({x:x0,y:y1},{x:x0,y:y0}); if(kind==="ground"){ tw(x0,y0); tw(x1,y0); tw(x1,y1); tw(x0,y1) } }
+  else if(kind==="goal"){ sp({x:x0,y:y1},{x:x1,y:y1}); tw(x0,y1); tw(x1,y1) }
+  else if(kind==="line"){ sp({x:x0,y:cy},{x:x1,y:cy}) }
+  else if(kind==="ladder"){ var m=r2((x0+x1)/2); [y0,y1].forEach(function(y){ sp({x:x0,y:y},{x:m,y:y}); sp({x:m,y:y},{x:x1,y:y}) });
+    [x0,m,x1].forEach(function(x){ sp({x:x,y:y0},{x:x,y:y1}) }) }
+  sel=null; all();
+}
+var tpl={w:10,d:6,h:6}, drawing=null;
+
+/* ---------- layers ---------- */
+function catOf(o){ var it=ITEMS[o.item]; return it?it.cat:"other" }
+function layerOf(c){ return S.layers[c]||{} }
+function hiddenObj(o){ return !!layerOf(catOf(o)).hide }
+function lockedObj(o){ return !!layerOf(catOf(o)).lock }
+var EYE='<svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M1 8s2.6-4.5 7-4.5S15 8 15 8s-2.6 4.5-7 4.5S1 8 1 8z" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="2" fill="currentColor"/></svg>';
+var EYE_OFF='<svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M1 8s2.6-4.5 7-4.5S15 8 15 8s-2.6 4.5-7 4.5S1 8 1 8z" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".45"/><path d="M2 14L14 2" stroke="currentColor" stroke-width="1.4"/></svg>';
+var LOCK='<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
+var UNLOCK='<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".6"/><path d="M5 7V5a3 3 0 0 1 5.8-1" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".6"/></svg>';
+function renderLayers(){
+  var cnt={}; S.objs.forEach(function(o){ var c=catOf(o); cnt[c]=(cnt[c]||0)+1 });
+  var h='<div class="layers-h"><h3 style="margin:0">Слои</h3><button class="sm ghost" data-layer-all>Показать все</button></div><div class="layers">';
+  Object.keys(CATS).forEach(function(c){ var L=layerOf(c), k=cnt[c]||0;
+    h+='<div class="layer'+(L.hide?" off":"")+(k?"":" empty")+'"><button class="lbtn" data-layer-eye="'+c+'" aria-pressed="'+(!L.hide)+'" title="'+(L.hide?"Показать":"Скрыть")+'">'+(L.hide?EYE_OFF:EYE)+'</button>'+
+      '<button class="lname" data-layer-solo="'+c+'" title="Показать только этот слой"><i style="background:'+CATS[c].color+'"></i>'+esc(CATS[c].name)+'</button><small>'+k+'</small>'+
+      '<button class="lbtn" data-layer-lock="'+c+'" aria-pressed="'+(!!L.lock)+'" title="'+(L.lock?"Разблокировать":"Заблокировать: на плане не выделяется и не двигается")+'">'+(L.lock?LOCK:UNLOCK)+'</button></div>' });
+  $("#layers").innerHTML=h+'</div>';
+}
+function setLayer(c,key,val){ S.layers[c]=S.layers[c]||{}; S.layers[c][key]=val; if(sel&&obj(sel)&&catOf(obj(sel))===c&&val) sel=null }
+
+/* ---------- calculation ---------- */
+function pieces(type,need){ var std=CABLES[type].std, max=std[std.length-1], out=[];
+  while(need>max){ out.push(max); need-=max }
+  for(var i=0;i<std.length;i++) if(std[i]>=need-1e-9){ out.push(std[i]); break }
+  return out }
+function compute(){
+  var R={need:{}, auto:{}, runs:[], warns:[], cab:{}, power:0, objs:0};
+  function add(id,q,auto){ if(!id||!q) return; R.need[id]=(R.need[id]||0)+q; if(auto) R.auto[id]=true }
+  var P=S.objs.map(function(o){ var it=ITEMS[o.item]; if(!it) return null; var pl=placeOf(o); return {o:o,it:it,k:it.kind,K:KINDS[it.kind]||KINDS.other,x:o.x,y:o.y,z:pl.z,pl:pl} }).filter(Boolean);
+  var V=S.venue, st=S.stage, foh=S.foh;
+  var fohPt={x:foh.x+foh.w/2,y:foh.y,z:0, name:"FOH"};
+  var gens=P.filter(function(p){return p.k==="gen"});
+  var inlet=gens.length?{x:gens[0].x,y:gens[0].y,z:0,name:"Генератор"}:{x:S.inlet.x,y:S.inlet.y,z:0,name:"Ввод питания"};
+
+  // counts
+  var hoistsPlaced=false, framesPlaced=false;
+  P.forEach(function(p){
+    var o=p.o; R.objs++;
+    if(p.k==="truss"||p.k==="tower"){}
+    else if(p.K.line && p.k!=="led"){ add(p.it.id, Math.max(1,Math.ceil(n(o.len)/lineUnit(p.it,p.k)-1e-9))*Math.max(1,o.qty||1)); }
+    else if(p.k==="led"){ var pn=ledPanel(p.it); p.panels=Math.ceil(n(o.len)/pn.w-1e-9)*Math.ceil(n(o.h)/pn.h-1e-9); add(p.it.id,p.panels); p.watts=p.panels*pn.watts }
+    else add(p.it.id, Math.max(1,o.qty||1));
+    if(p.k==="hoist") hoistsPlaced=true; if(p.k==="frame") framesPlaced=true;
+    if(p.watts==null) p.watts=(p.it.watts||0)*Math.max(1,o.qty||1);
+    if(!inRect(o,{x:0,y:0,w:V.w,d:V.d})) R.warns.push("«"+p.it.name+"» стоит за пределами площадки.");
+  });
+  // stage decks 2×1 m: best orientation
+  if(st.w>0&&st.d>0){ var a=Math.ceil(st.w/2-1e-9)*Math.ceil(st.d/1-1e-9), b=Math.ceil(st.w/1-1e-9)*Math.ceil(st.d/2-1e-9); add(ID.deck,Math.min(a,b),true) }
+  var TS=trussSystem(); R.truss=TS; R.warns=R.warns.concat(TS.warns);
+  Object.keys(TS.parts.sec).forEach(function(k){ var nm=k.split("|")[0], id=nm==="Опора"?ID.pillar:CATALOG.filter(function(it){return it.name===nm})[0].id; add(id,TS.parts.sec[k]) });
+  var blocks=0; Object.keys(TS.parts.blocks).forEach(function(k){blocks+=TS.parts.blocks[k]}); add(ID.corner,blocks,true);
+  if(!hoistsPlaced) add(ID.hoist, TS.parts.hoists, true);
+  if(!framesPlaced) P.forEach(function(p){ if(p.k==="spk" && p.pl.on==="air") add(ID.frame,1,true) });
+
+  // sources
+  var distros=P.filter(function(p){return p.k==="distro"});
+  function near(list,p){ var b=null,bd=1e9; list.forEach(function(s){ var d=Math.abs(s.x-p.x)+Math.abs(s.y-p.y); if(d<bd){bd=d;b=s} }); return b }
+  function srcOf(type,p){ var list=P.filter(function(q){return q.K.src===type && !(type==="power"&&false)}); return near(list,p) }
+  function pt(p){ return {x:p.x,y:p.y,z:p.z} }
+  function run(type,a,b,label,same,mult){
+    var dx=Math.abs(a.x-b.x), dy=Math.abs(a.y-b.y), len, pts;
+    if(same){ len=Math.hypot(dx,dy)+Math.abs((a.z||0)-(b.z||0)); pts=[[a.x,a.y],[b.x,b.y]] }
+    else { len=dx+dy+(a.z||0)+(b.z||0); pts=[[a.x,a.y],[a.x,b.y],[b.x,b.y]] }
+    var need=len*(1+S.slack/100)+1, pc=pieces(type,need);
+    for(var i=0;i<(mult||1);i++){ R.runs.push({type:type,len:len,pcs:pc,pts:pts,label:label}) }
+  }
+  var fohLoads=0;
+  // feeders: inlet → each distro
+  distros.forEach(function(d){ if(!inFOH(d.o)) run("feed",inlet,pt(d),"Ввод → дистрибьютор") });
+  if(!distros.length) R.warns.push("Нет дистрибьюторов питания: всё питание посчитано прямо от ввода. Добавьте «Power Distributions» у сцены.");
+  var pwrSrc=distros.length?distros:[{x:inlet.x,y:inlet.y,z:0}];
+  function nearPwr(p){ return near(pwrSrc,p) }
+  // FOH power
+  var fohDevices=P.filter(function(p){return inFOH(p.o)&&p.watts>0});
+  if(fohDevices.length){ var fd=distros.filter(function(d){return inFOH(d.o)})[0]; if(!fd){ var s0=nearPwr(fohPt); run(s0===pwrSrc[0]&&!distros.length?"feed":"power",s0,fohPt,"Питание FOH") } fohDevices.forEach(function(p){fohLoads+=p.watts}) }
+
+  // chains for light & sfx: group by host truss, else by placement
+  var chainers=P.filter(function(p){return p.K.chain && !inFOH(p.o)});
+  var groups={};
+  chainers.forEach(function(p){ var key=p.pl.truss?("t"+p.pl.truss):(p.pl.on+(p.k==="sfx"?"-sfx":"")); (groups[key]=groups[key]||[]).push(p) });
+  var dmxSrcs=P.filter(function(p){return p.K.src==="dmx"});
+  var dmxSrcFallback={x:fohPt.x,y:fohPt.y,z:0};
+  Object.keys(groups).forEach(function(key){
+    var g=groups[key], onTruss=key.charAt(0)==="t";
+    function order(start){ var rest=g.slice(), out=[], cur=start; while(rest.length){ var bi=0,bd=1e9; rest.forEach(function(p,i){var d=Math.hypot(p.x-cur.x,p.y-cur.y); if(d<bd){bd=d;bi=i}}); cur=rest.splice(bi,1)[0]; out.push(cur) } return out }
+    // power
+    var ps=nearPwr(g[0]); var seq=order(ps), w=0, prev=null;
+    seq.forEach(function(p){ var pw=p.watts;
+      if(!prev || w+pw>3000){ run("power",ps,pt(p),"Питание линии приборов"); w=0 } else run("power",pt(prev),pt(p),"Перемычка питания",onTruss);
+      if(p.o.qty>1) for(var j=1;j<p.o.qty;j++) R.runs.push({type:"power",len:1,pcs:[1.5],pts:null,label:"Перемычка в группе"});
+      w+=pw; prev=p });
+    // dmx
+    var dm=g.filter(function(p){return !/Follow Spot/.test(p.it.name)});
+    if(dm.length){ var ds=near(dmxSrcs,dm[0])||dmxSrcFallback; var seq2=order(ds), c=0, pv=null;
+      seq2.forEach(function(p){ if(dm.indexOf(p)<0) return; var q=Math.max(1,p.o.qty||1);
+        if(!pv || c+q>32){ run("dmx",ds,pt(p),"DMX линия"); c=0 } else run("dmx",pt(pv),pt(p),"DMX перемычка",onTruss);
+        for(var j=1;j<q;j++) R.runs.push({type:"dmx",len:1,pcs:[1.5],pts:null,label:"DMX в группе"});
+        c+=q; pv=p }) }
+  });
+  if(chainers.some(function(p){return p.K.sig==="dmx"}) && !dmxSrcs.length) R.warns.push("Нет светового пульта или DMX-сплиттера: DMX посчитан от FOH.");
+
+  // other powered devices: home run from nearest distro
+  P.forEach(function(p){
+    if(p.K.chain || p.k==="distro" || inFOH(p.o)) return;
+    if(p.k==="led"){ var lines=Math.max(1,Math.ceil(p.watts/3000)); var s=nearPwr(p); run("power",s,pt(p),"Питание экрана",false,lines);
+      run("net",fohPt,pt(p),"Данные экрана",false,Math.max(1,Math.ceil(p.panels/20))); return }
+    if(p.watts>0) run("power",nearPwr(p),pt(p),"Питание: "+p.it.name);
+  });
+  // signal
+  var amps=P.filter(function(p){return p.k==="amp"}), boxes=P.filter(function(p){return p.k==="stagebox"});
+  var spkObjs=P.filter(function(p){return p.K.sig==="spk"});
+  if(spkObjs.length&&!amps.length) R.warns.push("На плане нет усилителей: акустические линии посчитаны от FOH.");
+  spkObjs.forEach(function(p){ var s=near(amps,p)||fohPt; run("spk",s,pt(p),"Акустика: "+p.it.name,false,Math.max(1,Math.ceil((p.o.qty||1)/2))) });
+  P.forEach(function(p){
+    if(p.K.sig==="xlr" && !inFOH(p.o)){ var s=near(boxes,p)||fohPt; var q=Math.max(1,p.o.qty||1); if(p.k==="dj") q=2*q; if(p.k==="radio") q=4*q; run("xlr",s,pt(p),"XLR: "+p.it.name,false,q) }
+    if(p.K.sig==="sdi" && !inFOH(p.o)) run("sdi",fohPt,pt(p),"Видео: "+p.it.name,false,Math.max(1,p.o.qty||1));
+    if((p.k==="stagebox"||p.k==="node") && !inFOH(p.o)) run("net",fohPt,pt(p),"Сеть FOH → "+p.it.name);
+    if(p.k==="amp" && !inFOH(p.o)) run("net",near(boxes,p)||fohPt,pt(p),"Сигнал на усилители");
+  });
+  var xlrSrc=P.some(function(p){return p.K.sig==="xlr"&&!inFOH(p.o)}); if(xlrSrc&&!boxes.length) R.warns.push("Нет стейдж-бокса: микрофонные линии посчитаны до FOH.");
+
+  // aggregate cables
+  CABLE_ORDER.forEach(function(t){ R.cab[t]={runs:0,route:0,load:0,pcs:{}} });
+  R.runs.forEach(function(r){ var c=R.cab[r.type]; c.runs++; c.route+=r.len; r.pcs.forEach(function(x){ c.load+=x; c.pcs[x]=(c.pcs[x]||0)+1 }) });
+  // cable protectors on the stage→FOH route
+  var toFOH=R.runs.filter(function(r){return r.pts && Math.abs(r.pts[0][0]-fohPt.x)<1e-6 && Math.abs(r.pts[0][1]-fohPt.y)<1e-6}).length + (fohDevices.length?1:0);
+  var gap=Math.max(0,foh.y-(st.y+st.d));
+  if(gap>0 && toFOH && !P.some(function(p){return p.k==="protector"})) add(ID.prot,Math.ceil(gap/.9)*Math.ceil(toFOH/5),true);
+  R.power=P.reduce(function(s,p){return s+(p.k==="distro"?0:p.watts)},0);
+  return R;
+}
+
+/* ---------- catalog ---------- */
+var HIDE={cable:1,deck:1};
+function renderCatalog(){
+  var q=$("#q").value.trim().toLowerCase(), h="";
+  Object.keys(CATS).forEach(function(c){
+    var list=CATALOG.filter(function(it){return it.cat===c && !HIDE[it.kind] && (!q||it.name.toLowerCase().indexOf(q)>=0||it.sub.toLowerCase().indexOf(q)>=0)});
+    if(!list.length) return;
+    h+='<div class="cat-h"><i style="background:'+CATS[c].color+'"></i>'+esc(CATS[c].name)+'</div>';
+    list.forEach(function(it){ h+='<button class="eq" draggable="true" data-add="'+it.id+'" title="'+esc(it.sub)+'"><span>'+esc(it.name)+'</span><small>'+(it.qty||"—")+'</small></button>' });
+  });
+  $("#catalog").innerHTML=h||'<p class="hint">Ничего не найдено.</p>';
+}
+
+/* ---------- plan view ---------- */
+var svg, dragging=null, raf=0;
+function fitView(){ var m=1.5, V=S.venue, el=$("#plan"), r=el.getBoundingClientRect(), ar=(r.width||800)/(r.height||560);
+  var w=V.w+2*m, h=V.d+2*m; if(w/h<ar) w=h*ar; else h=w/ar; view={x:V.w/2-w/2,y:V.d/2-h/2,w:w,h:h} }
+function color(o){ var it=ITEMS[o.item]; return (CATS[it&&it.cat]||CATS.other).color }
+function shortName(it){ return it.name.replace(/^(D&B Audiotechnik|CKC|Shure|Yamaha|Sennheiser|NovaStar|Pioneer|DJ Power|Gloshine|Blackmagic|L'Acoustics)\s+/,"").replace(/\s*\(.*\)/,"") }
+function drawObj(o,R){
+  var it=ITEMS[o.item]; if(!it) return ""; var k=it.kind, K=KINDS[k]||KINDS.other, c=color(o), s="", isSel=o.id===sel, q=Math.max(1,o.qty||1);
+  var tr='translate('+o.x+' '+o.y+') rotate('+(o.rot||0)+')';
+  var label=shortName(it)+(q>1&&!K.line?" ×"+q:"");
+  if(K.line){
+    var L=n(o.len), hl=L/2;
+    if(k==="truss"){ var w=/30/.test(it.name)?.3:.4; s+='<rect class="body" x="'+(-hl)+'" y="'+(-w/2)+'" width="'+L+'" height="'+w+'" fill="none" stroke="'+c+'" stroke-width=".05"/>';
+      var zz=""; for(var x=-hl;x<hl-1e-6;x+=.5){ zz+="M"+r2(x)+" "+(-w/2)+"L"+r2(Math.min(hl,x+.25))+" "+(w/2)+"L"+r2(Math.min(hl,x+.5))+" "+(-w/2) } s+='<path d="'+zz+'" fill="none" stroke="'+c+'" stroke-width=".025" opacity=".7"/>';
+      var sp=R&&R.truss&&R.truss.spans[o.id], secTxt="";
+      if(sp){ var xs=-hl+sp.offA, tk=""; sp.pcs.forEach(function(x,i){ if(i>0) tk+="M"+r2(xs)+" "+(-w/2-.06)+"V"+(w/2+.06); xs+=x }); if(tk) s+='<path d="'+tk+'" stroke="var(--fg)" stroke-width=".04"/>';
+        var cnt={}; sp.pcs.forEach(function(x){cnt[x]=(cnt[x]||0)+1}); secTxt=Object.keys(cnt).map(Number).sort(function(a,b){return b-a}).map(function(x){return num(x)+"×"+cnt[x]}).join("+") }
+      s+='<rect x="'+(-hl)+'" y="-.35" width="'+L+'" height=".7" fill="transparent"/>';
+      s+='<text class="dim" x="0" y="-.42" font-size=".3" text-anchor="middle">'+num(L)+' м'+(secTxt?' ('+secTxt+')':'')+' · h '+num(o.z)+'</text>' }
+    else if(k==="led"){ s+='<rect class="body" x="'+(-hl)+'" y="-.15" width="'+L+'" height=".3" fill="'+c+'" stroke="'+c+'" stroke-width=".02"/><line x1="'+(-hl)+'" y1=".25" x2="'+hl+'" y2=".25" stroke="'+c+'" stroke-width=".04" stroke-dasharray=".2 .12"/>';
+      s+='<rect x="'+(-hl)+'" y="-.4" width="'+L+'" height=".8" fill="transparent"/>';
+      s+='<text class="dim" x="0" y="-.3" font-size=".32" text-anchor="middle">LED '+num(L)+'×'+num(o.h)+' м</text>' }
+    else { var dash=k==="barrier"?'stroke-dasharray=".5 .12"':""; s+='<line class="body" x1="'+(-hl)+'" y1="0" x2="'+hl+'" y2="0" stroke="'+c+'" stroke-width="'+(k==="barrier"?.22:.4)+'" '+dash+'/>';
+      s+='<rect x="'+(-hl)+'" y="-.35" width="'+L+'" height=".7" fill="transparent"/>';
+      s+='<text class="dim" x="0" y=".55" font-size=".3" text-anchor="middle">'+esc(shortName(it))+' · '+num(L)+' м</text>' }
+    var g='<g class="obj'+(isSel?" sel":"")+'" data-id="'+o.id+'"'+(lockedObj(o)?' pointer-events="none" opacity=".55"':'')+' transform="'+tr+'">'+s+'</g>';
+    if(isSel){ var e=ends(o); g+='<circle class="handle" data-h="0" data-id="'+o.id+'" cx="'+e[0].x+'" cy="'+e[0].y+'" r=".22"/><circle class="handle" data-h="1" data-id="'+o.id+'" cx="'+e[1].x+'" cy="'+e[1].y+'" r=".22"/>' }
+    return g;
+  }
+  var pl=placeOf(o), hung=pl.on==="truss"||pl.on==="air";
+  if(K.r){ s+='<circle class="body" r="'+K.r+'" fill="'+c+'" fill-opacity="'+(hung?.9:.35)+'" stroke="'+c+'" stroke-width=".03"/>';
+    if(k==="light"||k==="sfx") s+='<line x1="0" y1="0" x2="0" y2="'+(K.r+.12)+'" stroke="'+c+'" stroke-width=".05"/>';
+    if(q>1) s+='<circle r="'+(K.r+.08)+'" fill="none" stroke="'+c+'" stroke-width=".02" stroke-dasharray=".05 .05"/>' }
+  else { var w2=K.w, d2=K.d; if((k==="spk"||k==="sub")&&q>1&&pl.on!=="air"){ d2=K.d*Math.min(q,4)*.6 }
+    s+='<rect class="body" x="'+(-w2/2)+'" y="'+(-d2/2)+'" width="'+w2+'" height="'+d2+'" rx=".05" fill="'+c+'" fill-opacity="'+(hung?.85:.3)+'" stroke="'+c+'" stroke-width=".03"/>';
+    if(k==="tower") s+='<path d="M'+(-w2/2)+' '+(-d2/2)+'L'+(w2/2)+' '+(d2/2)+'M'+(w2/2)+' '+(-d2/2)+'L'+(-w2/2)+' '+(d2/2)+'" stroke="'+c+'" stroke-width=".04"/>';
+    if(K.sig==="spk"||k==="aspk"||k==="tv") s+='<line x1="'+(-w2/2)+'" y1="'+(d2/2)+'" x2="'+(w2/2)+'" y2="'+(d2/2)+'" stroke="'+c+'" stroke-width=".08"/>' }
+  var g2='<g class="obj'+(isSel?" sel":"")+'" data-id="'+o.id+'"'+(lockedObj(o)?' pointer-events="none" opacity=".55"':'')+' transform="'+tr+'">'+s+'</g>';
+  if(K.chain&&pl.on==="truss"&&!isSel) return g2;
+  var ry=(K.r||Math.max(K.w,K.d)/2)+.32;
+  g2+='<text class="lbl" x="'+o.x+'" y="'+(o.y+ry)+'" font-size=".26" text-anchor="middle" opacity=".85">'+esc(label)+(hung?' ↑'+num(pl.z)+' м':'')+'</text>';
+  return g2;
+}
+function renderPlan(R){
+  var V=S.venue, st=S.stage, f=S.foh, h="";
+  if(!view) fitView();
+  svg.setAttribute("viewBox",view.x+" "+view.y+" "+view.w+" "+view.h);
+  document.documentElement.style.setProperty("--ar",(V.w+3)/(V.d+3));
+  // grid
+  h+='<rect x="0" y="0" width="'+V.w+'" height="'+V.d+'" fill="var(--surface)" stroke="var(--grid2)" stroke-width=".06"/>';
+  var gp=""; for(var x=1;x<V.w;x++) gp+="M"+x+" 0V"+V.d; for(var y=1;y<V.d;y++) gp+="M0 "+y+"H"+V.w;
+  h+='<path d="'+gp+'" stroke="var(--grid)" stroke-width=".025"/>';
+  var gp5=""; for(x=5;x<V.w;x+=5) gp5+="M"+x+" 0V"+V.d; for(y=5;y<V.d;y+=5) gp5+="M0 "+y+"H"+V.w; h+='<path d="'+gp5+'" stroke="var(--grid2)" stroke-width=".035"/>';
+  for(x=0;x<=V.w;x+=5) h+='<text class="dim" x="'+x+'" y="-.3" font-size=".4" text-anchor="middle">'+x+'</text>';
+  for(y=0;y<=V.d;y+=5) h+='<text class="dim" x="-.35" y="'+(y+.14)+'" font-size=".4" text-anchor="end">'+y+'</text>';
+  h+='<text class="dim" x="'+V.w/2+'" y="'+(V.d+.9)+'" font-size=".45" text-anchor="middle">Площадка '+num(V.w)+' × '+num(V.d)+' м · зрители ↓</text>';
+  // stage
+  h+='<g data-fixed="stage" class="obj"><rect x="'+st.x+'" y="'+st.y+'" width="'+st.w+'" height="'+st.d+'" fill="var(--stage)" stroke="var(--stage-edge)" stroke-width=".07"/>';
+  var dk=""; for(x=st.x+2;x<st.x+st.w-1e-6;x+=2) dk+="M"+x+" "+st.y+"V"+(st.y+st.d); for(y=st.y+1;y<st.y+st.d-1e-6;y+=1) dk+="M"+st.x+" "+y+"H"+(st.x+st.w);
+  h+='<path d="'+dk+'" stroke="var(--stage-edge)" stroke-width=".015" opacity=".35"/>';
+  h+='<text class="dim" x="'+(st.x+.2)+'" y="'+(st.y+st.d-.2)+'" font-size=".38">Сцена '+num(st.w)+'×'+num(st.d)+' м, h '+num(st.h)+' м</text></g>';
+  // foh
+  h+='<g data-fixed="foh" class="obj"><rect x="'+f.x+'" y="'+f.y+'" width="'+f.w+'" height="'+f.d+'" fill="var(--foh)" stroke="var(--c-video)" stroke-width=".05" stroke-dasharray=".25 .15"/><text class="dim" x="'+(f.x+.15)+'" y="'+(f.y+f.d-.2)+'" font-size=".4">FOH</text></g>';
+  // inlet
+  if(!S.objs.some(function(o){return kindKey(o)==="gen"})) h+='<g data-fixed="inlet" class="obj" transform="translate('+S.inlet.x+' '+S.inlet.y+')"><rect x="-.35" y="-.35" width=".7" height=".7" fill="var(--c-power)" rx=".08"/><path d="M.06 -.25 L-.12 .04 H.04 L-.06 .26 L.14 -.04 H-.02 Z" fill="var(--surface)"/><text class="dim" x="0" y=".7" font-size=".3" text-anchor="middle">Ввод питания</text></g>';
+  // cables under objects
+  var cab="";
+  R.runs.forEach(function(r){ if(!r.pts||!show[r.type]) return; var off=(CABLE_ORDER.indexOf(r.type)-3)*.07;
+    cab+='<polyline points="'+r.pts.map(function(p){return (p[0]+off)+","+(p[1]+off)}).join(" ")+'" fill="none" stroke="'+CABLES[r.type].color+'" stroke-width=".05" stroke-opacity=".75" stroke-linejoin="round"/>' });
+  h+='<g pointer-events="none">'+cab+'</g>';
+  // objects: lines first (trusses under fixtures)
+  var objs=S.objs.filter(function(o){return !hiddenObj(o)}).sort(function(a,b){ var la=kOf(a).line?0:1, lb=kOf(b).line?0:1; return la-lb });
+  objs.forEach(function(o){ h+=drawObj(o,R) });
+  // corner blocks and joints of truss structures
+  if(R.truss) R.truss.nodes.forEach(function(nd){ if(hiddenObj(nd.ends[0].t)) return; var t0=nd.ends[0].t, c=color(t0);
+    if(nd.block) h+='<rect x="'+(-nd.w/2)+'" y="'+(-nd.w/2)+'" width="'+nd.w+'" height="'+nd.w+'" transform="translate('+nd.x+' '+nd.y+') rotate('+(t0.rot||0)+')" fill="'+c+'" stroke="var(--fg)" stroke-width=".03" pointer-events="none"/>';
+    else if(nd.straight) h+='<circle cx="'+nd.x+'" cy="'+nd.y+'" r=".07" fill="var(--fg)" pointer-events="none"/>' });
+  if(drawing){ var dc=drawing.cur;
+    if(drawing.start&&dc){ var Ld=Math.hypot(dc.x-drawing.start.x,dc.y-drawing.start.y); h+='<line x1="'+drawing.start.x+'" y1="'+drawing.start.y+'" x2="'+dc.x+'" y2="'+dc.y+'" stroke="var(--accent)" stroke-width=".12" stroke-dasharray=".3 .15" pointer-events="none"/><text class="dim" x="'+((dc.x+drawing.start.x)/2)+'" y="'+((dc.y+drawing.start.y)/2-.35)+'" font-size=".4" text-anchor="middle" style="fill:var(--accent)">'+num(Ld)+' м</text>' }
+    if(dc) h+='<circle cx="'+dc.x+'" cy="'+dc.y+'" r="'+(dc.node||dc.split?.28:.16)+'" fill="none" stroke="var(--accent)" stroke-width=".06" pointer-events="none"/>' }
+  svg.innerHTML=h;
+}
+
+/* ---------- front view ---------- */
+function renderFront(){
+  var V=S.venue, st=S.stage, f=$("#front"), maxZ=10, h="";
+  S.objs.forEach(function(o){ var pl=placeOf(o), K=kOf(o); maxZ=Math.max(maxZ,pl.z+(kindKey(o)==="led"?n(o.h):0)+1.5) });
+  var m=1.2; f.setAttribute("viewBox",(-m)+" "+(-maxZ)+" "+(V.w+2*m)+" "+(maxZ+1.4));
+  h+='<g transform="scale(1,-1)">';
+  h+='<rect x="0" y="-.02" width="'+V.w+'" height=".04" fill="var(--grid2)"/>';
+  var gz=""; for(var z=1;z<maxZ;z++) gz+="M0 "+z+"H"+V.w; h+='<path d="'+gz+'" stroke="var(--grid)" stroke-width=".02"/>';
+  h+='<rect x="'+st.x+'" y="0" width="'+st.w+'" height="'+st.h+'" fill="var(--stage)" stroke="var(--stage-edge)" stroke-width=".05"/>';
+  // back to front: larger y is closer to the viewer
+  var list=S.objs.map(function(o){return {o:o,k:kindKey(o),K:kOf(o),pl:placeOf(o),it:ITEMS[o.item]}}).filter(function(p){return p.it&&!hiddenObj(p.o)}).sort(function(a,b){return a.o.y-b.o.y});
+  list.forEach(function(p){ var o=p.o, c=color(o), z=p.pl.z, q=Math.max(1,o.qty||1);
+    if(p.k==="tower"){ var tn=lastR&&lastR.truss&&lastR.truss.towerNode[o.id], hz=tn?tn.z:(n(o.z)||4); h+='<rect x="'+(o.x-.2)+'" y="0" width=".4" height="'+hz+'" fill="'+c+'" fill-opacity=".25" stroke="'+c+'" stroke-width=".03"/>'; return }
+    if(p.k==="truss"||p.k==="barrier"||p.k==="protector"){ var e=ends(o), x1=Math.min(e[0].x,e[1].x), x2=Math.max(e[0].x,e[1].x), th=p.k==="truss"?(/30/.test(p.it.name)?.3:.4):(p.k==="barrier"?1.1:.08), zb=p.k==="truss"?z-th/2:0;
+      h+='<rect x="'+x1+'" y="'+zb+'" width="'+Math.max(.3,x2-x1)+'" height="'+th+'" fill="'+c+'" fill-opacity="'+(p.k==="truss"?.25:.15)+'" stroke="'+c+'" stroke-width=".03"/>';
+      if(p.k==="truss"){ h+='<line x1="'+((x1+x2)/2)+'" y1="'+(z+th/2)+'" x2="'+((x1+x2)/2)+'" y2="'+maxZ+'" stroke="var(--grid2)" stroke-width=".02" stroke-dasharray=".15 .1"/>' } return }
+    if(p.k==="led"){ var e2=ends(o), a=Math.min(e2[0].x,e2[1].x), b=Math.max(e2[0].x,e2[1].x);
+      h+='<rect x="'+a+'" y="'+z+'" width="'+(b-a)+'" height="'+n(o.h)+'" fill="'+c+'" fill-opacity=".55" stroke="'+c+'" stroke-width=".04"/>';
+      var pn=ledPanel(p.it), gl=""; for(var xx=a+pn.w;xx<b-1e-6;xx+=pn.w) gl+="M"+xx+" "+z+"v"+n(o.h); for(var zz=z+pn.h;zz<z+n(o.h)-1e-6;zz+=pn.h) gl+="M"+a+" "+zz+"H"+b; h+='<path d="'+gl+'" stroke="var(--surface)" stroke-width=".015" opacity=".5"/>'; return }
+    var K=p.K, w=K.r?K.r*2:K.w, hh=K.r?K.r*2:Math.min(.8,K.d*1.2);
+    if(p.k==="spk"&&p.pl.on==="air"){ for(var i=0;i<q;i++) h+='<rect x="'+(o.x-w/2)+'" y="'+(z-(i+1)*.35)+'" width="'+w+'" height=".33" fill="'+c+'" fill-opacity=".8" stroke="var(--surface)" stroke-width=".02" transform="rotate('+(i*1.2)+' '+o.x+' '+z+')"/>'; h+='<line x1="'+o.x+'" y1="'+z+'" x2="'+o.x+'" y2="'+maxZ+'" stroke="var(--grid2)" stroke-width=".02" stroke-dasharray=".15 .1"/>'; return }
+    if((p.k==="sub"||p.k==="spk")&&q>1){ var hs=p.k==="sub"?.7:.45; for(var j=0;j<Math.min(q,4);j++) h+='<rect x="'+(o.x-w/2)+'" y="'+(z+j*hs)+'" width="'+w+'" height="'+(hs-.03)+'" fill="'+c+'" fill-opacity=".7"/>'; return }
+    if(p.k==="light"||p.k==="sfx"){ var y0=p.pl.on==="truss"?z-.2-hh:z; h+='<rect x="'+(o.x-K.r)+'" y="'+y0+'" width="'+K.r*2+'" height="'+hh+'" rx=".08" fill="'+c+'" fill-opacity=".9"/>'; return }
+    h+='<rect x="'+(o.x-w/2)+'" y="'+z+'" width="'+w+'" height="'+hh+'" rx=".04" fill="'+c+'" fill-opacity=".7"/>';
+  });
+  // a 1.8 m person for scale
+  var px=st.x+st.w/2+st.w*.2, pz=st.h;
+  h+='<g fill="var(--muted)" opacity=".6"><circle cx="'+px+'" cy="'+(pz+1.65)+'" r=".13"/><rect x="'+(px-.2)+'" y="'+(pz+.8)+'" width=".4" height=".72" rx=".1"/><rect x="'+(px-.17)+'" y="'+pz+'" width=".14" height=".85"/><rect x="'+(px+.03)+'" y="'+pz+'" width=".14" height=".85"/></g>';
+  h+='</g>';
+  for(var z2=0;z2<=maxZ;z2+=2) h+='<text class="dim" x="-.3" y="'+(-z2+.12)+'" font-size=".38" text-anchor="end">'+z2+' м</text>';
+  h+='<text class="dim" x="'+V.w/2+'" y="1" font-size=".42" text-anchor="middle">Вид из зала · высоты по осям, человек 1,8 м для масштаба</text>';
+  f.innerHTML=h;
+}
+
+/* ---------- inspector ---------- */
+function fld(label,id,val,step,full){ return '<label class="f'+(full?" full":"")+'">'+label+'<input type="number" data-f="'+id+'" value="'+val+'" step="'+(step||.25)+'"></label>' }
+function renderInsp(R){
+  var h="", o=sel&&obj(sel);
+  if(o){ var it=ITEMS[o.item], k=it.kind, K=KINDS[k]||KINDS.other, pl=placeOf(o);
+    h+='<h3>'+esc(K.name)+'</h3><p class="selname">'+esc(it.name)+'</p><p class="hint" style="margin-top:0">На складе: '+(it.qty||"—")+' · '+esc(CATS[it.cat].name)+'</p><div class="sep"></div><div class="fields">';
+    h+=fld("X, м","x",o.x)+fld("Y, м","y",o.y);
+    if(K.line) h+=fld("Длина, м","len",o.len,.5);
+    if(k==="led") h+=fld("Высота экрана, м","h",o.h,.5);
+    h+=fld("Поворот, °","rot",o.rot||0,15);
+    if(!K.line||k==="barrier") h+=fld(k==="barrier"?"Рядов":"Кол-во в точке","qty",o.qty||1,1);
+    if(k==="tower"&&!(R.truss&&R.truss.towerNode[o.id])) h+=fld("Высота опоры, м","z",o.z||4,.5);
+    if(k==="truss"||k==="led") h+=fld(k==="truss"?"Высота подвеса, м":"Низ экрана, м","z",o.z,.5);
+    h+='</div>';
+    if(!K.line){
+      h+='<label class="f full" style="margin-top:8px">Где стоит<select data-f="on"><option value="auto"'+(o.on==="auto"?" selected":"")+'>Авто ('+({truss:"на ферме",stage:"на сцене",floor:"на полу"}[pl.on]||"—")+')</option><option value="stage"'+(o.on==="stage"?" selected":"")+'>На сцене</option><option value="floor"'+(o.on==="floor"?" selected":"")+'>На полу</option><option value="air"'+(o.on==="air"?" selected":"")+'>В подвесе</option></select></label>';
+      if(o.on==="air") h+='<div class="fields" style="margin-top:8px">'+fld("Высота подвеса, м","z",o.z||6,.5,true)+'</div>';
+    }
+    var spi=k==="truss"&&R.truss&&R.truss.spans[o.id];
+    if(spi){ var cn={}; spi.pcs.forEach(function(x){cn[x]=(cn[x]||0)+1}); h+='<p class="hint">Секции: '+Object.keys(cn).map(Number).sort(function(a,b){return b-a}).map(function(x){return num(x)+" м × "+cn[x]}).join(", ")+(spi.offA||spi.offB?' (между углами '+num(spi.net,2)+' м)':'')+'. Соединителей: '+spi.sets+'. Концы тянутся мышью и прилипают к другим фермам.</p>' }
+    else if(k==="tower"){ h+='<p class="hint">'+(R.truss&&R.truss.towerNode[o.id]?'Стоит под узлом фермы, высота берётся от фермы.':'Поставьте опору в угол фермы, и она встанет под узел.')+'</p>' }
+    else if(K.line&&k!=="led"){ var cnt=Math.ceil(n(o.len)/lineUnit(it,k)-1e-9)*(k==="barrier"?Math.max(1,o.qty||1):1); h+='<p class="hint">Это '+cnt+' шт. по '+num(lineUnit(it,k))+' м. Концы можно тянуть мышью.</p>' }
+    if(k==="led"){ var pn=ledPanel(it); h+='<p class="hint">Модуль '+num(pn.w)+'×'+num(pn.h)+' м: '+Math.ceil(n(o.len)/pn.w-1e-9)+' × '+Math.ceil(n(o.h)/pn.h-1e-9)+' = '+(Math.ceil(n(o.len)/pn.w-1e-9)*Math.ceil(n(o.h)/pn.h-1e-9))+' шт.</p>' }
+    if(k==="spk") h+='<p class="hint">Для линейного массива поставьте «В подвесе» и число кабинетов в «Кол-во в точке».</p>';
+    h+='<div class="row"><button class="sm" data-act="rotl">⟲ 15°</button><button class="sm" data-act="rotr">⟳ 15°</button><button class="sm" data-act="dup">Копия</button><button class="sm" data-act="mirror" title="Копия, отражённая относительно центра сцены">Зеркально</button><button class="sm danger" data-act="del">Удалить</button></div>';
+    h+='<div class="row"><button class="sm ghost" data-act="desel">← Настройки площадки</button></div>';
+  } else {
+    var V=S.venue, st=S.stage, f=S.foh;
+    h+='<h2>Площадка</h2><div class="fields">'+fld("Ширина, м","venue.w",V.w,1)+fld("Глубина, м","venue.d",V.d,1)+'</div>';
+    h+='<div class="sep"></div><h3>Сцена</h3><div class="fields">'+fld("Ширина, м","stage.w",st.w,1)+fld("Глубина, м","stage.d",st.d,1)+fld("Высота, м","stage.h",st.h,.1)+'<span></span>'+fld("Отступ слева, м","stage.x",st.x,.5)+fld("От задней стены, м","stage.y",st.y,.5)+'</div>';
+    h+='<div class="row"><button class="sm" data-act="center">По центру площадки</button></div>';
+    h+='<div class="sep"></div><h3>FOH и питание</h3><div class="fields">'+fld("FOH, X","foh.x",f.x,.5)+fld("FOH, Y","foh.y",f.y,.5)+fld("FOH ширина","foh.w",f.w,.5)+fld("FOH глубина","foh.d",f.d,.5)+fld("Ввод питания, X","inlet.x",S.inlet.x,.5)+fld("Ввод питания, Y","inlet.y",S.inlet.y,.5)+'</div>';
+    h+='<p class="hint">Сцену, FOH и ввод питания можно двигать мышью на плане.</p>';
+    h+='<div class="sep"></div><h3>Конструкции из ферм</h3><div class="fields">'+'<label class="f">Ширина, м<input type="number" data-tpl="w" value="'+tpl.w+'" step="1"></label><label class="f">Глубина, м<input type="number" data-tpl="d" value="'+tpl.d+'" step="1"></label><label class="f">Высота, м<input type="number" data-tpl="h" value="'+tpl.h+'" step=".5"></label></div>';
+    h+='<div class="row"><button class="sm" data-struct="rect">Прямоугольник</button><button class="sm" data-struct="ground">Граунд на 4 опорах</button><button class="sm" data-struct="goal">Ворота</button><button class="sm" data-struct="ladder">Решётка</button><button class="sm" data-struct="line">Линия</button></div>';
+    h+='<p class="hint">Размеры — длина пролётов между кубами. Ставится по центру сцены из фермы, выбранной у кнопки «Рисовать ферму». Любую другую форму рисуйте этой кнопкой: клик ставит точку, концы прилипают к узлам, клик по ферме делает в ней T-узел.</p>';
+    h+='<div class="sep"></div><h3>Расчёт кабелей</h3><div class="fields">'+fld("Запас, %","slack",S.slack,5,true)+'</div>';
+    h+='<p class="hint">Трасса идёт по полу углом (сначала вдоль глубины, потом поперёк), с подъёмом на высоту подвеса. К каждой трассе +1 м на разделку и запас в процентах, потом подбирается ближайшая стандартная длина. Приборы на одной ферме соединяются цепочкой: питание до 3 кВт на линию, DMX до 32 приборов.</p>';
+    h+='<div class="sep"></div><button class="sm danger" data-act="clear">Очистить план</button>';
+  }
+  $("#insp").innerHTML=h;
+}
+
+/* ---------- results ---------- */
+function renderResults(R){
+  var rows={}, deficit=0, total=0;
+  Object.keys(R.need).forEach(function(id){ var it=ITEMS[id]; if(!it) return; (rows[it.cat]=rows[it.cat]||[]).push(it); total+=R.need[id]; if(it.qty>0 && R.need[id]>it.qty) deficit++ });
+  var cabRoute=0, cabLoad=0, cabPcs=0; CABLE_ORDER.forEach(function(t){ var c=R.cab[t]; cabRoute+=c.route; cabLoad+=c.load; Object.keys(c.pcs).forEach(function(k){cabPcs+=c.pcs[k]}) });
+  $("#stats").innerHTML=
+    '<div class="stat"><small>Позиций / единиц</small><b>'+Object.keys(R.need).length+' / '+num(total,0)+'</b></div>'+
+    '<div class="stat'+(deficit?" bad":"")+'"><small>Не хватает на складе</small><b>'+deficit+'</b></div>'+
+    '<div class="stat"><small>Кабелей, шт</small><b>'+num(cabPcs,0)+'</b></div>'+
+    '<div class="stat"><small>Кабелей, м</small><b>'+num(cabLoad,0)+'</b></div>'+
+    '<div class="stat"><small>Мощность, кВт</small><b>'+num(R.power/1000,1)+'</b></div>';
+  $("#warns").innerHTML=R.warns.slice(0,6).map(function(w){return "<li>"+esc(w)+"</li>"}).join("");
+  var h='<div class="tablebox"><table><thead><tr><th>Наименование</th><th class="num">Нужно</th><th class="num">На складе</th><th class="num">Остаток</th></tr></thead><tbody>';
+  Object.keys(CATS).forEach(function(c){ if(!rows[c]) return; h+='<tr class="grp"><td colspan="4">'+esc(CATS[c].name)+'</td></tr>';
+    rows[c].sort(function(a,b){return a.name.localeCompare(b.name)}).forEach(function(it){ var need=R.need[it.id], left=it.qty-need;
+      h+='<tr><td>'+esc(it.name)+(R.auto[it.id]?'<span class="pill" title="Посчитано автоматически">авто</span>':'')+'</td><td class="num">'+num(need,0)+'</td><td class="num">'+(it.qty||"—")+'</td><td class="num'+(it.qty>0&&left<0?" neg":"")+'">'+(it.qty>0?num(left,0):"—")+'</td></tr>' }) });
+  h+='</tbody></table></div>';
+  if(!total) h='<p class="hint">План пуст. Добавьте оборудование из списка слева.</p>';
+  $("#eqTable").innerHTML=h;
+  var c='<div class="tablebox"><table><thead><tr><th>Кабель</th><th class="num">Линий</th><th class="num">Трасса, м</th><th>Нарезка</th><th class="num">Взять, м</th></tr></thead><tbody>';
+  CABLE_ORDER.forEach(function(t){ var x=R.cab[t]; if(!x.runs) return; var pcs=Object.keys(x.pcs).map(Number).sort(function(a,b){return a-b}).map(function(l){return num(l)+" м × "+x.pcs[l]}).join(" · ");
+    c+='<tr><td><span class="swatch" style="background:'+CABLES[t].color+'"></span>'+esc(CABLES[t].name)+'</td><td class="num">'+x.runs+'</td><td class="num">'+num(x.route,0)+'</td><td class="pieces">'+pcs+'</td><td class="num">'+num(x.load,0)+'</td></tr>' });
+  c+='</tbody><tfoot><tr><td>Итого</td><td class="num">'+R.runs.length+'</td><td class="num">'+num(cabRoute,0)+'</td><td class="pieces">'+num(cabPcs,0)+' шт.</td><td class="num">'+num(cabLoad,0)+'</td></tr></tfoot></table></div>';
+  c+='<p class="hint">«Трасса» — расстояние по полу и по высоте. «Взять» — сумма стандартных кусков с запасом. Перемычки внутри LED-экрана в расчёт не входят, они идут комплектом с модулями.</p>';
+  if(!R.runs.length) c='<p class="hint">Кабели появятся, когда на плане будут приборы с питанием или сигналом.</p>';
+  $("#cabTable").innerHTML=c;
+  $("#legend").innerHTML='<span>Кабели на плане:</span>'+CABLE_ORDER.map(function(t){ return R.cab[t].runs?'<label><input type="checkbox" data-show="'+t+'"'+(show[t]?" checked":"")+'><i style="background:'+CABLES[t].color+'"></i>'+esc(CABLES[t].name.split(" (")[0])+'</label>':"" }).join("");
+}
+
+var lastR=null;
+function all(){ var R=compute(); lastR=R; renderLayers(); renderTrussTab(R); renderPlan(R); if(mode==="front") renderFront(); if(mode==="3d") render3d(R); renderInsp(R); renderResults(R); $("#setupName").value=S.name; save() }
+function quick(){ if(raf) return; raf=requestAnimationFrame(function(){ raf=0; var R=compute(); lastR=R; renderPlan(R) }) }
+
+/* ---------- 3D view (three.js r128, loaded on first use) ---------- */
+// Plan x → X, plan y → Z, height → Y. A plan rotation of a degrees is rotation.y = -a.
+var T3=null, cam3={theta:0, phi:1.05, r:30, tx:15, ty:2, tz:8}, beams=true, fitted3=false;
+function cssVar(c){ var m=/var\((--[\w-]+)\)/.exec(c); var v=m?getComputedStyle(document.documentElement).getPropertyValue(m[1]).trim():c; return v||"#888" }
+function need3d(cb){
+  if(window.THREE) return cb();
+  var s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
+  s.onload=cb; s.onerror=function(){ $("#v3msg").textContent="Не удалось загрузить 3D-библиотеку. Проверьте интернет и откройте вкладку ещё раз."; $("#v3msg").hidden=false };
+  document.head.appendChild(s);
+}
+function init3d(){
+  var box=$("#v3"), TH=window.THREE;
+  var renderer=new TH.WebGLRenderer({antialias:true, preserveDrawingBuffer:true});
+  renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1)); renderer.shadowMap.enabled=true; renderer.shadowMap.type=TH.PCFSoftShadowMap;
+  box.appendChild(renderer.domElement);
+  var scene=new TH.Scene(), camera=new TH.PerspectiveCamera(45,1,.1,500);
+  T3={renderer:renderer, scene:scene, camera:camera, root:null, pick:[]};
+  var el=renderer.domElement, drag=null, pinch=null;
+  el.style.touchAction="none"; el.style.display="block";
+  el.addEventListener("contextmenu",function(e){e.preventDefault()});
+  el.addEventListener("pointerdown",function(e){ drag={x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY,pan:e.button===2||e.shiftKey,id:e.pointerId}; el.setPointerCapture(e.pointerId) });
+  el.addEventListener("pointermove",function(e){ if(!drag||pinch) return; var dx=e.clientX-drag.x, dy=e.clientY-drag.y; drag.x=e.clientX; drag.y=e.clientY;
+    if(drag.pan){ var k=cam3.r/700, t=cam3.theta; cam3.tx+=(-Math.cos(t)*dx-Math.sin(t)*dy)*k; cam3.tz+=(Math.sin(t)*dx-Math.cos(t)*dy)*k }
+    else { cam3.theta-=dx*.008; cam3.phi=Math.max(.08,Math.min(1.52,cam3.phi-dy*.006)) }
+    draw3d() });
+  el.addEventListener("pointerup",function(e){ if(!drag) return; var moved=Math.abs(e.clientX-drag.sx)+Math.abs(e.clientY-drag.sy); drag=null; if(moved<5) pick3d(e) });
+  el.addEventListener("pointercancel",function(){drag=null});
+  el.addEventListener("wheel",function(e){ e.preventDefault(); cam3.r=Math.max(3,Math.min(150,cam3.r*(e.deltaY>0?1.1:.9))); draw3d() },{passive:false});
+  el.addEventListener("touchstart",function(e){ if(e.touches.length===2){ pinch={d:Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY),r:cam3.r}; drag=null } },{passive:true});
+  el.addEventListener("touchmove",function(e){ if(pinch&&e.touches.length===2){ var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); cam3.r=Math.max(3,Math.min(150,pinch.r*pinch.d/d)); draw3d() } },{passive:true});
+  el.addEventListener("touchend",function(e){ if(e.touches.length<2) pinch=null },{passive:true});
+}
+function pick3d(e){
+  var TH=window.THREE, r=T3.renderer.domElement.getBoundingClientRect(), m=new TH.Vector2((e.clientX-r.left)/r.width*2-1, -(e.clientY-r.top)/r.height*2+1), rc=new TH.Raycaster();
+  rc.setFromCamera(m,T3.camera); var hit=rc.intersectObjects(T3.pick,true)[0], id=null;
+  for(var o=hit&&hit.object;o;o=o.parent) if(o.userData.id){ id=o.userData.id; break }
+  sel=id; all();
+}
+function view3(kind){ var st=S.stage; cam3.tx=st.x+st.w/2; cam3.tz=st.y+st.d/2; cam3.ty=Math.max(1.5,st.h+1);
+  var span=Math.max(S.venue.w,S.venue.d);
+  if(kind==="top"){ cam3.theta=0; cam3.phi=.1; cam3.r=span*1.25 }
+  else if(kind==="side"){ cam3.theta=Math.PI/2; cam3.phi=1.25; cam3.r=span*.9 }
+  else if(kind==="foh"){ cam3.ty=st.h+2; var vx=S.foh.x+S.foh.w/2-cam3.tx, vy=2.8-cam3.ty, vz=S.foh.y+S.foh.d/2-cam3.tz; cam3.r=Math.hypot(vx,vy,vz); cam3.phi=Math.acos(vy/cam3.r); cam3.theta=Math.atan2(vx,vz) }
+  else { cam3.theta=-.55; cam3.phi=1.12; cam3.r=span*1.05 }
+  draw3d() }
+function draw3d(){
+  if(!T3) return; var box=$("#v3"), w=box.clientWidth||800, h=box.clientHeight||560;
+  T3.renderer.setSize(w,h,false); T3.renderer.domElement.style.width="100%"; T3.renderer.domElement.style.height=h+"px";
+  T3.camera.aspect=w/h; T3.camera.updateProjectionMatrix();
+  var c=T3.camera, sp=Math.sin(cam3.phi);
+  c.position.set(cam3.tx+cam3.r*sp*Math.sin(cam3.theta), cam3.ty+cam3.r*Math.cos(cam3.phi), cam3.tz+cam3.r*sp*Math.cos(cam3.theta));
+  c.lookAt(cam3.tx,cam3.ty,cam3.tz);
+  T3.renderer.render(T3.scene,c);
+}
+function build3d(R){
+  var TH=window.THREE; if(!T3) init3d(); var sc=T3.scene;
+  if(T3.root){ sc.remove(T3.root); T3.root.traverse(function(o){ if(o.geometry) o.geometry.dispose(); if(o.material){ (Array.isArray(o.material)?o.material:[o.material]).forEach(function(m){ if(m.map) m.map.dispose(); m.dispose() }) } }) }
+  var root=new TH.Group(); T3.root=root; T3.pick=[]; sc.add(root);
+  var dark=matchMedia("(prefers-color-scheme: dark)").matches&&document.documentElement.dataset.theme!=="light"||document.documentElement.dataset.theme==="dark";
+  sc.background=new TH.Color(cssVar("var(--bg)"));
+  var V=S.venue, st=S.stage, foh=S.foh, MAT={};
+  function mat(col,opt){ var key=col+JSON.stringify(opt||{}); if(!MAT[key]){ var o={color:new TH.Color(cssVar(col)),roughness:.75,metalness:.05}; for(var k in opt) o[k]=opt[k]; MAT[key]=new TH.MeshStandardMaterial(o) } return MAT[key] }
+  function boxM(w,h,d,m,x,y,z,parent){ var g=new TH.Mesh(new TH.BoxGeometry(w,h,d),m); g.position.set(x,y,z); g.castShadow=true; g.receiveShadow=true; (parent||root).add(g); return g }
+  // lights
+  sc.children.filter(function(o){return o.isLight}).forEach(function(l){sc.remove(l)});
+  sc.add(new TH.HemisphereLight(0xffffff, dark?0x202428:0xb8c0c6, dark?.55:.85));
+  var sun=new TH.DirectionalLight(0xffffff, dark?.6:.75); sun.position.set(V.w*.2,30,V.d*1.2); sun.target.position.set(V.w/2,0,V.d/2); sun.castShadow=true;
+  var span=Math.max(V.w,V.d); sun.shadow.camera.left=-span; sun.shadow.camera.right=span; sun.shadow.camera.top=span; sun.shadow.camera.bottom=-span; sun.shadow.mapSize.set(2048,2048); sun.shadow.bias=-.0005;
+  sc.add(sun); sc.add(sun.target);
+  // floor + grid
+  var fl=new TH.Mesh(new TH.PlaneGeometry(V.w,V.d), mat("var(--surface)")); fl.rotation.x=-Math.PI/2; fl.position.set(V.w/2,0,V.d/2); fl.receiveShadow=true; root.add(fl);
+  var gp=[]; for(var x=0;x<=V.w+1e-6;x++){ gp.push(x,.005,0, x,.005,V.d) } for(var y=0;y<=V.d+1e-6;y++){ gp.push(0,.005,y, V.w,.005,y) }
+  var gg=new TH.BufferGeometry(); gg.setAttribute("position",new TH.Float32BufferAttribute(gp,3));
+  root.add(new TH.LineSegments(gg,new TH.LineBasicMaterial({color:new TH.Color(cssVar("var(--grid2)")),transparent:true,opacity:.6})));
+  // stage with deck seams
+  var sg=boxM(st.w,st.h||.02,st.d,mat("var(--stage)"),st.x+st.w/2,(st.h||.02)/2,st.y+st.d/2); sg.userData.fixed="stage";
+  var edges=new TH.LineSegments(new TH.EdgesGeometry(sg.geometry),new TH.LineBasicMaterial({color:new TH.Color(cssVar("var(--stage-edge)"))})); sg.add(edges);
+  var dp=[], top=(st.h||.02)+.003; for(x=st.x+2;x<st.x+st.w-1e-6;x+=2) dp.push(x,top,st.y, x,top,st.y+st.d); for(y=st.y+1;y<st.y+st.d-1e-6;y++) dp.push(st.x,top,y, st.x+st.w,top,y);
+  var dg=new TH.BufferGeometry(); dg.setAttribute("position",new TH.Float32BufferAttribute(dp,3)); root.add(new TH.LineSegments(dg,new TH.LineBasicMaterial({color:new TH.Color(cssVar("var(--stage-edge)")),transparent:true,opacity:.35})));
+  // FOH riser
+  boxM(foh.w,.15,foh.d,mat("var(--foh)"),foh.x+foh.w/2,.075,foh.y+foh.d/2);
+  // people for scale: one on stage, a few in the audience
+  function person(px,pz,py){ var g=new TH.Group(), m=mat("var(--muted)"); var b=new TH.Mesh(new TH.CylinderGeometry(.17,.2,1.45,10),m); b.position.y=.73; b.castShadow=true; g.add(b); var hd=new TH.Mesh(new TH.SphereGeometry(.13,12,10),m); hd.position.y=1.62; hd.castShadow=true; g.add(hd); g.position.set(px,py||0,pz); root.add(g) }
+  person(st.x+st.w*.62, st.y+st.d*.7, st.h);
+  [[.35,3],[.5,4.5],[.62,2.6],[.45,6],[.7,5.2],[.28,5.6]].forEach(function(p){ var zz=st.y+st.d+p[1]; if(zz<V.d-.5 && !(zz>foh.y-.5&&zz<foh.y+foh.d+.5)) person(V.w*p[0], zz) });
+  var maxZ=8; S.objs.forEach(function(o){ var pl=placeOf(o); maxZ=Math.max(maxZ,pl.z+1) });
+
+  var TS=R.truss||trussSystem();
+  function trussMesh(parent,L,tw,cm,col,vertical){ // a square truss along local X (or Y when vertical), centred on the origin
+    [[-1,-1],[-1,1],[1,-1],[1,1]].forEach(function(s){ var ch=new TH.Mesh(new TH.CylinderGeometry(.025,.025,L,6),cm); if(!vertical) ch.rotation.z=Math.PI/2; if(vertical) ch.position.set(s[0]*tw/2,0,s[1]*tw/2); else ch.position.set(0,s[0]*tw/2,s[1]*tw/2); ch.castShadow=true; parent.add(ch) });
+    var zp=[]; for(var a=-L/2;a<L/2-1e-6;a+=tw){ var b=Math.min(L/2,a+tw); [-1,1].forEach(function(s){ if(vertical){ zp.push(-tw/2,a,s*tw/2, tw/2,b,s*tw/2, s*tw/2,a,-tw/2, s*tw/2,b,tw/2) } else { zp.push(a,-tw/2,s*tw/2, b,tw/2,s*tw/2, a,-s*tw/2,-tw/2, b,-s*tw/2,tw/2) } }) }
+    var zg=new TH.BufferGeometry(); zg.setAttribute("position",new TH.Float32BufferAttribute(zp,3)); parent.add(new TH.LineSegments(zg,new TH.LineBasicMaterial({color:new TH.Color(cssVar(col))}))) }
+  S.objs.forEach(function(o){
+    if(hiddenObj(o)) return;
+    var it=ITEMS[o.item]; if(!it) return; var k=it.kind, K=KINDS[k]||KINDS.other, pl=placeOf(o), col=color(o), isSel=o.id===sel, q=Math.max(1,o.qty||1);
+    var m=isSel?mat(col,{emissive:new TH.Color(cssVar("var(--accent)")),emissiveIntensity:.55}):mat(col);
+    var g=new TH.Group(); g.position.set(o.x,0,o.y); g.rotation.y=-rad(o.rot||0); g.userData.id=o.id; root.add(g); T3.pick.push(g);
+    var L=n(o.len), z=pl.z;
+    if(k==="tower"){ var tn=TS.towerNode[o.id], hz=tn?tn.z-(tn.block?tn.w/2:0):(n(o.z)||4), tw0=tn?tn.w:.4, tg=new TH.Group(); tg.position.y=hz/2; g.add(tg);
+      trussMesh(tg,hz,tw0,isSel?m:mat(col,{metalness:.6,roughness:.35}),col,true); boxM(.7,.03,.7,mat("var(--c-other)"),0,.015,0,g);
+      var th=new TH.Mesh(new TH.BoxGeometry(tw0+.1,hz,tw0+.1),new TH.MeshBasicMaterial({visible:false})); th.position.y=hz/2; g.add(th); return }
+    if(k==="truss"){ var tw=trussW(it), cm=isSel?m:mat(col,{metalness:.6,roughness:.35}), tgp=new TH.Group(); tgp.position.y=z; g.add(tgp); trussMesh(tgp,L,tw,cm,col,false);
+      var spn=TS.spans[o.id]; if(spn){ var xs=-L/2+spn.offA; spn.pcs.forEach(function(x,i){ if(i>0){ var ring=new TH.Mesh(new TH.BoxGeometry(.04,tw+.04,tw+.04),mat("var(--fg)")); ring.position.set(xs,z,0); g.add(ring) } xs+=x }) }
+      // chain hoists to the roof, only for structures without ground support
+      var hp=[]; if(TS.hung[o.id]!==false) [-L/2+.5,L/2-.5].forEach(function(xh){ hp.push(xh,z+tw/2,0, xh,maxZ+2,0); var mo=new TH.Mesh(new TH.BoxGeometry(.3,.4,.3),mat("var(--c-rig)")); mo.position.set(xh,z+tw/2+.6,0); g.add(mo) });
+      var hg=new TH.BufferGeometry(); hg.setAttribute("position",new TH.Float32BufferAttribute(hp,3)); g.add(new TH.LineSegments(hg,new TH.LineBasicMaterial({color:new TH.Color(cssVar("var(--muted)")),transparent:true,opacity:.6})));
+      var hit=new TH.Mesh(new TH.BoxGeometry(L,tw,tw),new TH.MeshBasicMaterial({visible:false})); hit.position.y=z; g.add(hit);
+      return }
+    if(k==="led"){ var H=n(o.h), pn=ledPanel(it);
+      var cv=document.createElement("canvas"), cols=Math.max(1,Math.round(L/pn.w)), rows=Math.max(1,Math.round(H/pn.h)); cv.width=Math.min(2048,cols*32); cv.height=Math.min(2048,Math.round(rows*32*pn.h/pn.w));
+      var cx=cv.getContext("2d"), gr=cx.createLinearGradient(0,0,cv.width,cv.height); gr.addColorStop(0,"#3a1c71"); gr.addColorStop(.5,"#d76d77"); gr.addColorStop(1,"#ffaf7b"); cx.fillStyle=gr; cx.fillRect(0,0,cv.width,cv.height);
+      cx.strokeStyle="rgba(0,0,0,.35)"; cx.lineWidth=1; for(var i=1;i<cols;i++){ cx.beginPath(); cx.moveTo(i*cv.width/cols,0); cx.lineTo(i*cv.width/cols,cv.height); cx.stroke() } for(i=1;i<rows;i++){ cx.beginPath(); cx.moveTo(0,i*cv.height/rows); cx.lineTo(cv.width,i*cv.height/rows); cx.stroke() }
+      cx.fillStyle="rgba(255,255,255,.85)"; cx.font="bold "+Math.round(cv.height/6)+"px sans-serif"; cx.textAlign="center"; cx.textBaseline="middle"; cx.fillText("LOTUS",cv.width/2,cv.height/2);
+      var tex=new TH.CanvasTexture(cv), face=new TH.MeshBasicMaterial({map:tex}), back=mat("var(--c-other)");
+      var scr=new TH.Mesh(new TH.BoxGeometry(L,H,.1),[back,back,back,back,face,back]); scr.position.y=z+H/2; scr.castShadow=true; g.add(scr);
+      if(isSel) scr.add(new TH.LineSegments(new TH.EdgesGeometry(scr.geometry),new TH.LineBasicMaterial({color:new TH.Color(cssVar("var(--accent)"))})));
+      if(z>st.h+.3){ var lp=[-L/2,L/2].map(function(xh){return [xh,z+H,0, xh,maxZ+2,0]}); var lg=new TH.BufferGeometry(); lg.setAttribute("position",new TH.Float32BufferAttribute([].concat.apply([],lp),3)); g.add(new TH.LineSegments(lg,new TH.LineBasicMaterial({color:new TH.Color(cssVar("var(--muted)"))}))) }
+      return }
+    if(k==="barrier"){ for(var r=0;r<q;r++){ var b=boxM(L,1.1,.12,m,0,.55,r*1.2,g); b.material=mat(col,{transparent:true,opacity:.75}) } return }
+    if(k==="protector"){ boxM(L,.08,.5,m,0,.04,0,g); return }
+    if((k==="spk"||k==="sub")&&pl.on==="air"){ // line array hang
+      var bw=K.w, bd=K.d, bh=k==="sub"?.55:.33, yy=z, ang=0, zz=0;
+      boxM(bw+.1,.08,bd+.1,mat("var(--c-rig)"),0,z+.04,0,g);
+      for(var j=0;j<q;j++){ var cab=new TH.Mesh(new TH.BoxGeometry(bw,bh,bd),m); cab.castShadow=true; yy-=bh*Math.cos(ang); zz+=bh*Math.sin(ang); cab.position.set(0,yy+bh/2,zz); cab.rotation.x=ang; g.add(cab); ang+=.035*(j>q/2?2:1) }
+      var cl=new TH.BufferGeometry(); cl.setAttribute("position",new TH.Float32BufferAttribute([0,z,0,0,maxZ+2,0],3)); g.add(new TH.LineSegments(cl,new TH.LineBasicMaterial({color:new TH.Color(cssVar("var(--muted)"))})));
+      return }
+    if(k==="spk"||k==="sub"||k==="aspk"){ var bh2=k==="sub"?.6:(k==="aspk"?.7:.4); for(var s2=0;s2<q;s2++){ boxM(K.w,bh2-.02,K.d,m,0,z+s2*bh2+bh2/2,0,g) }
+      if(k==="aspk"&&pl.on==="floor"&&q===1){ boxM(.04,1.2,.04,mat("var(--muted)"),0,.6,0,g); g.children[0].position.y=1.2+.35 } return }
+    if(k==="light"||k==="sfx"){
+      var hung=pl.on==="truss"||pl.on==="air", y0=hung?z-.25:z, rr=K.r||.24;
+      var base=new TH.Mesh(new TH.BoxGeometry(rr*1.4,.12,rr*1.2),mat("var(--c-other)")); base.position.y=hung?y0:y0+.06; base.castShadow=true; g.add(base);
+      var head=new TH.Mesh(k==="light"?new TH.CylinderGeometry(rr*.65,rr*.8,rr*1.6,14):new TH.BoxGeometry(rr*1.6,rr*1.2,rr*1.6),m); head.castShadow=true;
+      head.position.y=hung?y0-rr*.9:y0+.12+rr*.9; if(k==="light") head.rotation.x=hung?.45:-.35; g.add(head);
+      if(beams&&k==="light"&&!/Follow/.test(it.name)){
+        var tgtY=st.h, len=Math.max(1,(hung?y0-tgtY:3)), cone=new TH.Mesh(new TH.ConeGeometry(len*.22,len,20,1,true),new TH.MeshBasicMaterial({color:new TH.Color(cssVar(col)),transparent:true,opacity:dark?.13:.09,depthWrite:false,side:TH.DoubleSide,blending:dark?TH.AdditiveBlending:TH.NormalBlending}));
+        var pivot=new TH.Group(); pivot.position.copy(head.position); pivot.rotation.x=hung?.45:Math.PI-.35; cone.position.y=-len/2; pivot.add(cone); g.add(pivot) }
+      for(var c2=1;c2<Math.min(q,6);c2++){ var cp=head.clone(); cp.position.x=c2*rr*2.2-(q-1)*rr*1.1; g.add(cp) }
+      return }
+    if(k==="mic"||k==="stand"){ boxM(.03,1.45,.03,mat("var(--muted)"),0,z+.72,0,g); var mh=new TH.Mesh(new TH.SphereGeometry(.05,10,8),m); mh.position.y=z+1.5; g.add(mh); boxM(.4,.02,.4,mat("var(--muted)"),0,z+.01,0,g); return }
+    if(/Mirror ball/.test(it.name)){ var mb=new TH.Mesh(new TH.SphereGeometry(.5,20,14),mat("#C9D1D6",{metalness:.9,roughness:.15,emissive:isSel?new TH.Color(cssVar("var(--accent)")):new TH.Color(0),emissiveIntensity:.5})); mb.position.y=Math.max(z,.5); mb.castShadow=true; g.add(mb); return }
+    if(k==="hoist"){ boxM(.3,.4,.3,m,0,(pl.z||6)+.2,0,g); return }
+    // generic: case-like block, consoles on a table, others on the floor
+    var w=K.w||(K.r?K.r*2:.6), d=K.d||(K.r?K.r*2:.5), hh={console:.25,lightdesk:.25,vproc:.4,amp:.2*q,stagebox:.3,distro:.45,gen:2,dj:.12,radio:.2,node:.15,tv:.9,proj:.4,cam:.3,camlight:.4,backline:.6,frame:.2}[k]||.5;
+    var lift=(k==="console"||k==="lightdesk"||k==="vproc"||k==="dj"||k==="radio")?.75:0;
+    if(lift) boxM(w+.2,.04,d+.1,mat("var(--c-other)"),0,z+lift-.02,0,g);
+    if(k==="tv"){ boxM(w,hh,.08,m,0,z+1.4,0,g); boxM(.06,1,.06,mat("var(--muted)"),0,z+.5,0,g); return }
+    if(k==="cam"){ boxM(.04,1.4,.04,mat("var(--muted)"),0,z+.7,0,g); boxM(.25,.25,.45,m,0,z+1.55,0,g); return }
+    if(k==="dj"&&/CDJ/.test(it.name)){ for(var dj=0;dj<q;dj++) boxM(.32,hh,.42,m,(dj-(q-1)/2)*.36,z+lift+hh/2,0,g); return }
+    boxM(w,hh,d,m,0,z+lift+hh/2,0,g);
+  });
+  // cables on the floor / up to the rig
+  var cp3={}; R.runs.forEach(function(r){ if(!r.pts||!show[r.type]) return; var off=(CABLE_ORDER.indexOf(r.type)-3)*.07, a=cp3[r.type]=cp3[r.type]||[];
+    var p=r.pts; for(var i=0;i<p.length-1;i++) a.push(p[i][0]+off,.03,p[i][1]+off, p[i+1][0]+off,.03,p[i+1][1]+off) });
+  Object.keys(cp3).forEach(function(t){ var gg2=new TH.BufferGeometry(); gg2.setAttribute("position",new TH.Float32BufferAttribute(cp3[t],3)); root.add(new TH.LineSegments(gg2,new TH.LineBasicMaterial({color:new TH.Color(CABLES[t].color)}))) });
+  TS.nodes.forEach(function(nd){ if(!nd.block||hiddenObj(nd.ends[0].t)) return; var cb=new TH.Mesh(new TH.BoxGeometry(nd.w+.02,nd.w+.02,nd.w+.02),mat("var(--c-rig)",{metalness:.5,roughness:.4})); cb.position.set(nd.x,nd.z,nd.y); cb.rotation.y=-rad(nd.ends[0].t.rot||0); cb.castShadow=true; root.add(cb) });
+  if(!fitted3){ fitted3=true; view3("persp"); return }
+  draw3d();
+}
+function render3d(R){ need3d(function(){ $("#v3msg").hidden=true; build3d(R||lastR) }) }
+
+/* ---------- interaction ---------- */
+function svgPt(e){ var p=svg.createSVGPoint(); p.x=e.clientX; p.y=e.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()) }
+function addAt(id,x,y){ push(); var o=O(id,snap(x),snap(y)); S.objs.push(o); sel=o.id; all() }
+
+document.addEventListener("click",function(e){
+  var a=e.target.closest("[data-add]"); if(a){ var st=S.stage; addAt(a.dataset.add, st.x+st.w/2, st.y+st.d/2); return }
+  var v=e.target.closest("[data-view]"); if(v){ mode=v.dataset.view; document.querySelectorAll("[data-view]").forEach(function(b){b.setAttribute("aria-pressed",b===v?"true":"false")}); $("#planwrap").hidden=mode!=="plan"; $("#frontwrap").hidden=mode!=="front"; $("#wrap3d").hidden=mode!=="3d"; if(mode==="front") renderFront(); if(mode==="3d") render3d(); return }
+  var cm=e.target.closest("[data-cam]"); if(cm){ if(T3) view3(cm.dataset.cam); return }
+  var le=e.target.closest("[data-layer-eye]"); if(le){ var c0=le.dataset.layerEye; setLayer(c0,"hide",!layerOf(c0).hide); all(); return }
+  var ll=e.target.closest("[data-layer-lock]"); if(ll){ var c1=ll.dataset.layerLock; setLayer(c1,"lock",!layerOf(c1).lock); all(); return }
+  var ls=e.target.closest("[data-layer-solo]"); if(ls){ var c2=ls.dataset.layerSolo, solo=Object.keys(CATS).every(function(c){return c===c2?!layerOf(c).hide:!!layerOf(c).hide});
+    Object.keys(CATS).forEach(function(c){ setLayer(c,"hide",solo?false:c!==c2) }); all(); return }
+  if(e.target.closest("[data-layer-all]")){ Object.keys(CATS).forEach(function(c){ setLayer(c,"hide",false) }); all(); return }
+  var stc=e.target.closest("[data-struct]"); if(stc){ addStructure(stc.dataset.struct); return }
+  var pb=e.target.closest("[data-pane-btn]"); if(pb){ tab=pb.dataset.paneBtn; document.querySelectorAll("[data-pane-btn]").forEach(function(b){b.setAttribute("aria-pressed",b===pb?"true":"false")}); document.querySelectorAll("[data-pane]").forEach(function(p){p.hidden=p.dataset.pane!==tab}); return }
+  var b=e.target.closest("[data-act]"); if(!b) return; var act=b.dataset.act, o=sel&&obj(sel);
+  if(act==="undo") undo();
+  else if(act==="draw") setDrawing(!drawing);
+  else if((act==="zin"||act==="zout")&&mode==="3d"){ cam3.r*=act==="zin"?.8:1.25; draw3d() }
+  else if(act==="fit"&&mode==="3d"){ if(T3) view3("persp") }
+  else if(act==="zin"||act==="zout"){ var f=act==="zin"?.8:1.25, cx=view.x+view.w/2, cy=view.y+view.h/2; view.w*=f; view.h*=f; view.x=cx-view.w/2; view.y=cy-view.h/2; renderPlan(lastR) }
+  else if(act==="fit"){ fitView(); renderPlan(lastR) }
+  else if(act==="desel"){ sel=null; all() }
+  else if(act==="center"){ push(); S.stage.x=r2((S.venue.w-S.stage.w)/2); all() }
+  else if(act==="clear"){ if(b.dataset.armed){ push(); S.objs=[]; sel=null; all() } else { b.dataset.armed="1"; b.textContent="Нажмите ещё раз, чтобы очистить" } }
+  else if(act==="copy") copyList(b);
+  else if(act==="export"){ var blob=new Blob([JSON.stringify(S,null,1)],{type:"application/json"}), u=URL.createObjectURL(blob), l=document.createElement("a"); l.href=u; l.download=(S.name||"setup").replace(/[\\/:*?"<>|]+/g,"_")+".json"; document.body.appendChild(l); l.click(); l.remove(); setTimeout(function(){URL.revokeObjectURL(u)},1000) }
+  else if(act==="import") $("#fileIn").click();
+  else if(act==="print"){ var m=mode; if(m!=="front") renderFront(); window.print() }
+  else if(o){
+    push();
+    if(act==="rotl"||act==="rotr"){ o.rot=((o.rot||0)+(act==="rotl"?-15:15)+360)%360; if(o.rot>180) o.rot-=360 }
+    else if(act==="dup"){ var c=clone(o); c.id=uid(); c.x=snap(o.x+1); c.y=snap(o.y+.5); S.objs.push(c); sel=c.id }
+    else if(act==="mirror"){ var m2=clone(o); m2.id=uid(); var cx2=S.stage.x+S.stage.w/2; m2.x=r2(2*cx2-o.x); m2.rot=-(o.rot||0); S.objs.push(m2); sel=m2.id }
+    else if(act==="del"){ S.objs=S.objs.filter(function(x){return x.id!==o.id}); sel=null }
+    all();
+  }
+});
+document.addEventListener("change",function(e){
+  var t=e.target;
+  if(t.dataset.show){ show[t.dataset.show]=t.checked; renderPlan(lastR); if(mode==="3d") render3d(); return }
+  if(t.id==="beams"){ beams=t.checked; render3d(); return }
+  if(t.dataset.tpl){ tpl[t.dataset.tpl]=Math.max(.5,n(t.value)); return }
+  if(t.dataset.ts){ push(); S.truss[t.dataset.ts]=t.dataset.ts==="sec"?t.value:Math.max(0,Math.round(n(t.value))); all(); return }
+  if(t.id==="drawItem"||t.id==="drawZ") return;
+  if(t.id==="preset"&&t.value){ push(); S=preset(t.value); sel=null; view=null; fitted3=false; all(); t.value=""; return }
+  if(t.id==="setupName"){ S.name=t.value; save(); return }
+  if(t.id==="fileIn"&&t.files[0]){ var r=new FileReader(); r.onload=function(){ try{ var s=JSON.parse(r.result); if(!s.venue||!s.objs) throw 0; push(); S=norm(s); sel=null; view=null; all() }catch(err){ $("#warns").innerHTML="<li>Этот файл не похож на сохранённый сетап. Откройте .json, сохранённый конструктором.</li>" } }; r.readAsText(t.files[0]); t.value=""; return }
+  var f=t.dataset.f; if(!f) return; push();
+  var o=sel&&obj(sel);
+  if(f==="on"){ o.on=t.value; if(t.value==="air"&&!o.z) o.z=6; all(); return }
+  var v=n(t.value);
+  if(o){ if(f==="qty") v=Math.max(1,Math.round(v)); if(f==="len"||f==="h") v=Math.max(.5,v); o[f]=v }
+  else { var p=f.split("."); if(p.length===2){ if(/\.(w|d)$/.test(f)) v=Math.max(1,v); if(f==="stage.h") v=Math.max(0,v); S[p[0]][p[1]]=v } else S[f]=Math.max(0,v); if(/^venue/.test(f)) view=null }
+  all();
+});
+$("#q").addEventListener("input",renderCatalog);
+document.addEventListener("dragstart",function(e){ var a=e.target.closest&&e.target.closest("[data-add]"); if(a){ e.dataTransfer.setData("text/plain",a.dataset.add); e.dataTransfer.effectAllowed="copy" } });
+
+function bindPlan(){
+  svg=$("#plan");
+  svg.addEventListener("dragover",function(e){e.preventDefault()});
+  svg.addEventListener("drop",function(e){ e.preventDefault(); var id=e.dataTransfer.getData("text/plain"); if(ITEMS[id]){ var p=svgPt(e); addAt(id,p.x,p.y) } });
+  svg.addEventListener("pointerdown",function(e){
+    var p=svgPt(e), hd=e.target.closest(".handle"), g=e.target.closest("[data-id],[data-fixed]");
+    if(drawing){ if(e.button===2){ setDrawing(false); return } drawClick(snapTrussPt(p)); e.preventDefault(); return }
+    if(hd){ push(); dragging={type:"handle",id:hd.dataset.id,end:+hd.dataset.h} }
+    else if(g&&g.dataset.id){ push(); var o=obj(g.dataset.id); sel=o.id; dragging={type:"obj",id:o.id,dx:p.x-o.x,dy:p.y-o.y}; renderInsp(lastR); quick() }
+    else if(g&&g.dataset.fixed){ push(); var fx=g.dataset.fixed, ref=S[fx]; dragging={type:"fixed",key:fx,dx:p.x-ref.x,dy:p.y-ref.y}; if(sel){sel=null; renderInsp(lastR)} }
+    else { dragging={type:"pan",sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y,moved:false} }
+    svg.setPointerCapture(e.pointerId); e.preventDefault();
+  });
+  svg.addEventListener("pointermove",function(e){
+    if(drawing&&!dragging){ drawing.cur=snapTrussPt(svgPt(e)); quick(); return }
+    if(!dragging) return; var p;
+    if(dragging.type==="pan"){ var r=svg.getBoundingClientRect(), k=Math.max(view.w/r.width,view.h/r.height); view.x=dragging.vx-(e.clientX-dragging.sx)*k; view.y=dragging.vy-(e.clientY-dragging.sy)*k; dragging.moved=true; svg.setAttribute("viewBox",view.x+" "+view.y+" "+view.w+" "+view.h); return }
+    p=svgPt(e);
+    if(dragging.type==="obj"){ var o=obj(dragging.id); o.x=snap(p.x-dragging.dx); o.y=snap(p.y-dragging.dy) }
+    else if(dragging.type==="fixed"){ var ref=S[dragging.key]; ref.x=snap(p.x-dragging.dx); ref.y=snap(p.y-dragging.dy) }
+    else if(dragging.type==="handle"){ var o2=obj(dragging.id), e2=ends(o2), fixed=e2[1-dragging.end], sn=kindKey(o2)==="truss"?snapTrussPt(p,o2.id):{x:snap(p.x),y:snap(p.y)}, nx=sn.x, ny=sn.y, L=Math.hypot(nx-fixed.x,ny-fixed.y);
+      if(L>=.5){ var ang=Math.atan2(ny-fixed.y,nx-fixed.x)*180/Math.PI; if(dragging.end===0) ang+=180; if(!sn.node) ang=Math.round(ang/5)*5; if(ang>180) ang-=360; if(ang<=-180) ang+=360;
+        var a=rad(ang), L2=sn.node?r2(L):$("#snap").checked?Math.round(L*2)/2:r2(L), dir=dragging.end===1?1:-1; o2.len=L2; o2.rot=ang; o2.x=r2(fixed.x+dir*Math.cos(a)*L2/2); o2.y=r2(fixed.y+dir*Math.sin(a)*L2/2) } }
+    quick();
+  });
+  svg.addEventListener("dblclick",function(){ if(drawing) setDrawing(false) });
+  svg.addEventListener("contextmenu",function(e){ if(drawing) e.preventDefault() });
+  function up(){ if(!dragging) return; var d=dragging; dragging=null;
+    if(d.type==="obj"){ var od=obj(d.id); if(od&&kindKey(od)==="tower"){ var bn=null, bd=.6; trussNodes().forEach(function(nd){ var dd=Math.hypot(nd.x-od.x,nd.y-od.y); if(dd<bd){bd=dd;bn=nd} }); if(bn){ od.x=r2(bn.x); od.y=r2(bn.y) } } }
+    if(d.type==="pan"){ if(!d.moved&&sel){ sel=null; all() } return }
+    all() }
+  svg.addEventListener("pointerup",up); svg.addEventListener("pointercancel",up);
+  svg.addEventListener("wheel",function(e){ if(!e.ctrlKey&&!e.metaKey&&!e.altKey) return; e.preventDefault(); var p=svgPt(e), f=e.deltaY>0?1.12:.89; view.x=p.x-(p.x-view.x)*f; view.y=p.y-(p.y-view.y)*f; view.w*=f; view.h*=f; renderPlan(lastR) },{passive:false});
+}
+document.addEventListener("keydown",function(e){
+  var tag=(e.target.tagName||"").toLowerCase(); if(tag==="input"||tag==="select") return;
+  if(drawing&&(e.key==="Escape"||e.key==="Enter")){ setDrawing(false); return }
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){ e.preventDefault(); undo(); return }
+  var o=sel&&obj(sel); if(!o) return;
+  if(e.key==="Delete"||e.key==="Backspace"){ push(); S.objs=S.objs.filter(function(x){return x.id!==o.id}); sel=null; all(); e.preventDefault() }
+  else if(e.key==="r"||e.key==="к"){ push(); o.rot=((o.rot||0)+(e.shiftKey?-15:15)); all() }
+  else if(e.key==="Escape"){ sel=null; all() }
+  else if(/^Arrow/.test(e.key)){ push(); var s=e.shiftKey?1:.25; if(e.key==="ArrowLeft")o.x=r2(o.x-s); if(e.key==="ArrowRight")o.x=r2(o.x+s); if(e.key==="ArrowUp")o.y=r2(o.y-s); if(e.key==="ArrowDown")o.y=r2(o.y+s); all(); e.preventDefault() }
+});
+window.addEventListener("resize",function(){ view=null; renderPlan(lastR); if(mode==="3d") draw3d() });
+
+function listText(){ var R=lastR, L=[S.name, "Площадка "+num(S.venue.w)+"×"+num(S.venue.d)+" м, сцена "+num(S.stage.w)+"×"+num(S.stage.d)+"×"+num(S.stage.h)+" м", "", "ОБОРУДОВАНИЕ"];
+  Object.keys(CATS).forEach(function(c){ var its=Object.keys(R.need).map(function(id){return ITEMS[id]}).filter(function(it){return it&&it.cat===c}); if(!its.length) return; L.push("— "+CATS[c].name); its.forEach(function(it){ L.push(it.name+"\t"+R.need[it.id]+(it.qty>0&&R.need[it.id]>it.qty?"\t(на складе "+it.qty+")":"")) }) });
+  var TP=R.truss&&R.truss.parts; if(TP&&(TP.metres||TP.plates)){ L.push("","ФЕРМЫ: "+num(TP.metres)+" м пролётов"+(TP.towerM?", опоры "+num(TP.towerM)+" м":"")); trussRows(R).forEach(function(r){ L.push(r[0]+"\t"+r[1]) }) }
+  L.push("","КАБЕЛИ"); CABLE_ORDER.forEach(function(t){ var x=R.cab[t]; if(!x.runs) return; L.push(CABLES[t].name+"\t"+num(x.load,0)+" м\t"+Object.keys(x.pcs).map(Number).sort(function(a,b){return a-b}).map(function(l){return num(l)+" м × "+x.pcs[l]}).join(", ")) });
+  return L.join("\n") }
+function copyList(b){ var t=listText(); function done(){ b.textContent="Скопировано"; setTimeout(function(){b.textContent="Копировать список"},1600) }
+  function fallback(){ var ta=document.createElement("textarea"); ta.value=t; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); try{ document.execCommand("copy"); done() }catch(e){} ta.remove() }
+  try{ navigator.clipboard.writeText(t).then(done,fallback) }catch(e){ fallback() } }
+// Inside an embedded viewer downloads and printing are blocked, so those buttons only show when the page is opened as a file.
+var embedded=false; try{ embedded=window.self!==window.top }catch(e){ embedded=true }
+if(embedded) document.querySelectorAll("[data-file]").forEach(function(x){x.hidden=true});
+function setDrawing(on){
+  drawing=on?{start:null,first:null,cur:null}:null; var b=$("#drawBtn"); b.setAttribute("aria-pressed",on?"true":"false"); b.textContent=on?"Закончить ферму":"Рисовать ферму";
+  $("#drawOpts").hidden=!on; svg.classList.toggle("drawing",!!on); if(on&&mode!=="plan") document.querySelector('[data-view="plan"]').click(); renderPlan(lastR) }
+function drawClick(pt){
+  var d=drawing; if(pt.split){ push(); splitTruss(pt.split,pt) }
+  if(!d.start){ d.start=d.first={x:pt.x,y:pt.y}; all(); return }
+  if(Math.hypot(pt.x-d.start.x,pt.y-d.start.y)<.5){ if(!pt.split) setDrawing(false); else all(); return }
+  if(!pt.split) push();
+  var z=pt.z!=null&&(pt.node||pt.split)?pt.z:n($("#drawZ").value)||7; S.objs.push(trussFrom(d.start,pt,$("#drawItem").value,z)); $("#drawZ").value=z;
+  var closed=Math.hypot(pt.x-d.first.x,pt.y-d.first.y)<.05;
+  d.start={x:pt.x,y:pt.y}; if(closed) { drawing=null; setDrawing(false) } all() }
+function trussRows(R){
+  var P=R.truss.parts, rows=[], ts=S.truss, secK=Object.keys(P.sec).sort(function(a,b){ var A=a.split("|"),B=b.split("|"); return A[0].localeCompare(B[0])||(+B[1])-(+A[1]) });
+  secK.forEach(function(k){ var a=k.split("|"); rows.push([(a[0]==="Опора"?"Опора (вертикальная секция)":a[0])+", секция "+num(+a[1])+" м",P.sec[k]+" шт."]) });
+  Object.keys(P.blocks).sort().forEach(function(k){ rows.push(["Угловой блок (куб) "+k,P.blocks[k]+" шт."]) });
+  if(P.sets){ rows.push(["Соединитель, комплект",P.sets+" шт."]); if(ts.cones) rows.push(["  конусы",P.sets*ts.cones+" шт."]); if(ts.pins) rows.push(["  пальцы",P.sets*ts.pins+" шт."]); if(ts.clips) rows.push(["  шплинты",P.sets*ts.clips+" шт."]) }
+  if(P.plates) rows.push(["Базовая плита опоры",P.plates+" шт."]);
+  if(P.hoists) rows.push(["Лебёдки (точки подвеса)",P.hoists+" шт."]);
+  return rows }
+function renderTrussTab(R){
+  var T=R.truss, ts=S.truss, h="";
+  h+='<div class="panel" style="margin-bottom:10px"><div class="fields" style="grid-template-columns:2fr 1fr 1fr 1fr">'+
+    '<label class="f">Длины секций на складе, м<input data-ts="sec" value="'+esc(ts.sec)+'"></label>'+
+    '<label class="f">Конусов на стык<input type="number" data-ts="cones" value="'+ts.cones+'" step="1"></label>'+
+    '<label class="f">Пальцев на стык<input type="number" data-ts="pins" value="'+ts.pins+'" step="1"></label>'+
+    '<label class="f">Шплинтов на стык<input type="number" data-ts="clips" value="'+ts.clips+'" step="1"></label></div>'+
+    '<p class="hint">Пролёт между углами раскладывается на секции из этого списка с наименьшим числом штук. Стык двух секций или секции с кубом занимает один комплект соединителей.</p></div>';
+  if(!T||(!T.comps.length&&!T.parts.plates)){ $("#trussTable").innerHTML=h+'<p class="hint">Ферм на плане нет. Нарисуйте их кнопкой «Рисовать ферму» над планом или добавьте готовую конструкцию в панели справа.</p>'; return }
+  h+='<div class="tablebox" style="margin-bottom:10px"><table><thead><tr><th>Конструкция</th><th class="num">Высота</th><th class="num">Ферма, м</th><th>Секции</th><th class="num">Кубы</th><th class="num">Стыки</th><th>Держится на</th></tr></thead><tbody>';
+  T.comps.forEach(function(c){ var sec=Object.keys(c.sec).map(function(k){var a=k.split("|");return num(+a[1])+" м × "+c.sec[k]}).join(" · "), bl=0; Object.keys(c.blocks).forEach(function(k){bl+=c.blocks[k]});
+    h+='<tr><td>'+esc(c.name)+'<div class="hint" style="margin:0">'+esc(ITEMS[c.item].name)+'</div></td><td class="num">'+num(c.z)+' м</td><td class="num">'+num(c.metres)+'</td><td class="pieces">'+sec+'</td><td class="num">'+bl+'</td><td class="num">'+c.sets+'</td><td>'+(c.hung?c.hoists+' лебёдок':c.towerList.length+' опор: '+c.towerList.map(function(t){return num(t.h)+' м'}).join(", "))+'</td></tr>' });
+  h+='</tbody></table></div>';
+  h+='<div class="tablebox"><table><thead><tr><th>Деталь</th><th class="num">Нужно</th></tr></thead><tbody>'+trussRows(R).map(function(r){return '<tr><td>'+esc(r[0])+'</td><td class="num">'+esc(r[1])+'</td></tr>'}).join("")+'</tbody>'+
+    '<tfoot><tr><td>Всего фермы</td><td class="num">'+num(T.parts.metres+T.parts.towerM)+' м</td></tr></tfoot></table></div>';
+  $("#trussTable").innerHTML=h;
+}
+S=load(); renderCatalog();
+var dsel=$("#drawItem"); CATALOG.filter(function(it){return it.kind==="truss"}).forEach(function(it){ var op=document.createElement("option"); op.value=it.id; op.textContent=it.name; dsel.appendChild(op) }); bindPlan(); all();
+})();
+</script>
+</body>
+</html>
